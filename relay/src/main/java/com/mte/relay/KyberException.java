@@ -25,6 +25,8 @@
 package com.mte.relay;
 
 import android.util.Log;
+
+import com.android.volley.BuildConfig;
 import com.eclypses.mte.MteKyber;
 
 public class KyberException extends RuntimeException {
@@ -48,8 +50,10 @@ public class KyberException extends RuntimeException {
     public KyberException(int status, String message) {
         super(new Exception(resolveEnum(status)));
         this.message = message;
-        Log.d("MTE", "MteKyber Exception. " + message +
-                ", Status: " + resolveEnum(status));
+        if (BuildConfig.DEBUG) {
+            Log.e("MTE", "MteKyber Exception. " + message +
+                    ", Status: " + resolveEnum(status));
+        }
     }
 
     private static String resolveEnum(int value) {

@@ -24,6 +24,24 @@
 
 package com.mte.relay;
 
+import android.util.Log;
+
+import com.android.volley.BuildConfig;
+import com.android.volley.Header;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
 public class MteRelayHeader {
     String type;
     Boolean urlIsEncoded;
@@ -47,5 +65,82 @@ public class MteRelayHeader {
         this.bodyEncodeType = bodyEncodeType;
         this.clientId = clientId;
         this.pairId = pairId;
+    }
+
+    public static RelayOptions getRelayHeaderValues(HttpURLConnection httpConn) {
+        String relayHeaderStr = httpConn.getHeaderField("x-mte-relay");
+        if (relayHeaderStr == null) {
+            throw new RelayException("MteRelayHeader", "No x-mte-relay response header.");
+        }
+        RelayOptions responseRelayOptions = RelayOptions.parseMteRelayHeader(relayHeaderStr);
+        if (responseRelayOptions.pairId == null || responseRelayOptions.pairId == "") {
+            throw new RelayException("MteRelayHeader",
+                    "No pairId in x-mte-relay response header.");
+        }
+        return responseRelayOptions;
+    }
+
+    static Map<String, List<String>> processHttpConnResponseHeaders(HttpURLConnection httpConn, MteHelper mteHelper, String responsePairId) throws IOException {
+        Map<String, List<String>> headerMap = httpConn.getHeaderFields();
+        Map<String, List<String>> updatedResponseHeaders = new HashMap<>(headerMap);
+        int status = httpConn.getResponseCode();
+        if (status == HttpURLConnection.HTTP_OK) {
+            // Decrypt encrypted headers
+            String ehHeader = httpConn.getHeaderField("x-mte-relay-eh");
+            processResponseHeaders(mteHelper, responsePairId, updatedResponseHeaders, ehHeader);
+        }
+        return updatedResponseHeaders;
+    }
+
+    static Map<String, List<String>> processVolleyResponseHeaders(RelayHeaders relayHeaders, MteHelper mteHelper) throws IOException {
+        Map<String, List<String>> updatedResponseHeaders = new HashMap<>();
+        for (Header header : relayHeaders.responseHeaderList) {
+            updatedResponseHeaders.put(header.getName(), Collections.singletonList(header.getValue()));
+        }
+        processResponseHeaders(mteHelper, relayHeaders.pairId, updatedResponseHeaders, relayHeaders.encryptedDecryptedHeaders);
+        return updatedResponseHeaders;
+    }
+
+    private static void processResponseHeaders(MteHelper mteHelper, String responsePairId, Map<String, List<String>> updatedResponseHeaders, String ehHeader) {
+        if (ehHeader != null && ehHeader != "") {
+            DecodeResult decodeResult = mteHelper.decode(responsePairId, ehHeader);
+            try {
+                JSONObject decodedHeaders = new JSONObject(decodeResult.decodedStr);
+                Log.d("MTE", "Decoded Header: " + decodedHeaders);
+                Iterator<String> keysIterator = decodedHeaders.keys();
+                while (keysIterator.hasNext()) {
+                    String key = keysIterator.next();
+                    String value = decodedHeaders.getString(key);
+                    updatedResponseHeaders.put(key, Collections.singletonList(value));
+                }
+            } catch (JSONException e) {
+                throw new RelayException("MteRelayHeader",
+                        "Unable to create JSONObject from x-mte-relay response header str.");
+            }
+        }
+        updatedResponseHeaders.remove("x-mte-relay-eh");
+        updatedResponseHeaders.remove("x-mte-relay");
+        List<String> headerNameList = new ArrayList<>();
+        headerNameList.add("access-control-allow-headers");
+        headerNameList.add("access-control-expose-headers");
+        removeAccessControlMteHeaderStrings(headerNameList, updatedResponseHeaders);
+    }
+
+    private static void removeAccessControlMteHeaderStrings(List<String> headerNameList,
+                                                            Map<String, List<String>> updatedResponseHeaders) {
+        for (String headerName : headerNameList) {
+            List<String> list = updatedResponseHeaders.get(headerName);
+            String[] splitString = list.get(0).split(", ");
+            ArrayList<String> accessControlHeadersList = new ArrayList<>(Arrays.asList(splitString));
+
+            accessControlHeadersList.removeIf(element -> element.equals(RelayHeaderType.relayHeader));
+            accessControlHeadersList.removeIf(element -> element.equals(RelayHeaderType.encryptedHeaders));
+
+            String str = String.join(", ", accessControlHeadersList);
+            List<String> updatedList = new ArrayList<>(Collections.singleton(str));
+
+            updatedResponseHeaders.remove(headerName);
+            updatedResponseHeaders.put(headerName, updatedList);
+        }
     }
 }

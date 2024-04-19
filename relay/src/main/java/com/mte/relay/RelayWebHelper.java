@@ -48,7 +48,6 @@
     import java.util.Map;
 
     public class RelayWebHelper {
-        private final String TAG = this.getClass().getSimpleName();
         private final String CONTENT_TYPE_KEY = "content-type";
         public static RelayWebHelper instance;
         private static Context ctx;
@@ -216,6 +215,7 @@
                     // Decrypt Headers
                     responseHeaders.encryptedDecryptedHeaders = header.getValue();
                 }
+                responseHeaders.responseHeaderList = response.allHeaders;
             }
         }
 
@@ -224,7 +224,8 @@
                     responseHeaders.clientId,
                     responseHeaders.pairId,
                     responseHeaders.encoderType,
-                    responseHeaders.encryptedDecryptedHeaders);
+                    responseHeaders.encryptedDecryptedHeaders,
+                    responseHeaders.responseHeaderList);
         }
 
         private static String processErrorResponseBody(VolleyError error) {
@@ -232,6 +233,7 @@
             try {
                 body = new String(error.networkResponse.data, "UTF-8");
             } catch (UnsupportedEncodingException e) {
+
                 Log.d("MTE", "Unable to convert error response body to String");
             }
             return body;

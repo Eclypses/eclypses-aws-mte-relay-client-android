@@ -1,7 +1,5 @@
 package com.mte.relay;
 
-import android.util.Log;
-
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -53,11 +51,15 @@ public class RelayHttpConnectionHelper {
         Thread networkThread = new Thread(() -> {
             try {
                 if (httpConn.getResponseCode() == HttpURLConnection.HTTP_OK) {
-                    processResponseHeaders();
+                    RelayOptions responseRelayOptions = MteRelayHeader.getRelayHeaderValues(httpConn);
+                    responsePairId = responseRelayOptions.pairId;
+                    Map<String, List<String>> processedHeaders = MteRelayHeader.processHttpConnResponseHeaders(httpConn,
+                            mteHelper,
+                            responsePairId);
                     processFileDownloadStream(downloadPath);
 
                     JSONObject jsonResponse = getJsonResponse(downloadPath);
-                    listener.onResponse(jsonResponse);
+                    listener.onResponse(jsonResponse, processedHeaders);
                     callback.onCallback();
                 } else {
                     listener.onError(httpConn.getResponseMessage());
@@ -97,32 +99,6 @@ public class RelayHttpConnectionHelper {
         jsonResponse.put("File Size", Files.size(path));
         jsonResponse.put("Download Location", downloadPath);
         return jsonResponse;
-    }
-
-    private void processResponseHeaders() throws IOException {
-        // Decode encryptedHeaders
-        int status = httpConn.getResponseCode();
-        if (status == HttpURLConnection.HTTP_OK) {
-            // Get Headers
-            String ehHeader = httpConn.getHeaderField("x-mte-relay-eh");
-            String relayHeaderStr = httpConn.getHeaderField("x-mte-relay");
-            if (relayHeaderStr == null) {
-                listener.onError("No x-mte-relay response header.");
-                return;
-            }
-            RelayOptions responseRelayOptions = RelayOptions.parseMteRelayHeader(relayHeaderStr);
-            if (responseRelayOptions.pairId == null || responseRelayOptions.pairId == "") {
-                listener.onError("No pairId in x-mte-relay response header.");
-                return;
-            }
-            responsePairId = responseRelayOptions.pairId;
-            if (ehHeader != null && ehHeader != "") {
-                DecodeResult decodeResult = mteHelper.decode(responsePairId, ehHeader);
-            }
-
-            Map<String, List<String>> headers = httpConn.getHeaderFields();
-//        headers.remove("x-mte-relay-eh"); // TODO: Remove any additional Relay Headers
-        }
     }
 
     private URL encodeRoute(String route, String pairId) throws UnsupportedEncodingException, MalformedURLException {

@@ -26,6 +26,9 @@ package com.mte.relay;
 
 import android.util.Log;
 
+import com.android.volley.BuildConfig;
+import com.eclypses.mte.MteBase;
+
 public class RelayException extends RuntimeException {
 
     private String className;
@@ -35,8 +38,9 @@ public class RelayException extends RuntimeException {
         super(new Exception(message));
         this.className = className;
         this.message = message;
-
-        Log.d("MTE", "Relay Exception in " + className +
-                ". Error: " + message);
+        if (BuildConfig.DEBUG) {
+            Log.d("MTE", "Relay Exception in " + className +
+                    ". Error: " + message);
+        }
     }
 }

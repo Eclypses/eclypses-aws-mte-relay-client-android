@@ -37,6 +37,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -74,13 +75,13 @@ public class Relay {
             }
 
             @Override
-            public void onResponse(byte[] responseBytes) {
-                listener.onResponse(responseBytes);
+            public void onResponse(byte[] responseBytes, Map<String, List<String>> responseHeaders) {
+                listener.onResponse(responseBytes, responseHeaders);
             }
 
             @Override
-            public void onResponse(JSONObject responseJson) {
-                listener.onResponse(responseJson);
+            public void onResponse(JSONObject responseJson, Map<String, List<String>> responseHeaders) {
+                listener.onResponse(responseJson, responseHeaders);
             }
         });
     }

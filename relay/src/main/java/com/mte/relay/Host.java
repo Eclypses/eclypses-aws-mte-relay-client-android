@@ -45,6 +45,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class Host {
@@ -57,7 +58,6 @@ public class Host {
     private final RelayWebHelper relayWebHelper;
     private static final int pairPoolSize = 3;
     private final Object lock = new Object();
-
     private int rePairAttempts = 1;
 
     public Host(Context ctx, String hostUrl) throws IOException {
@@ -77,7 +77,7 @@ public class Host {
                                 storedPairs = new JSONObject(storedHostsStr);
                                 RelaySettings.clientId = storedPairs.getString("clientId");
                                 String pairMapStates = storedPairs.getString("pairMapStates");
-                                if (pairMapStates != "") {
+                                if (!pairMapStates.isEmpty()) {
                                     boolean paired = mteHelper.refillPairMap(pairMapStates);
                                     if (paired) {
                                         notifyPaired();
@@ -85,7 +85,6 @@ public class Host {
                                         pairWithHost();
                                     }
                                 }
-
                             } catch (JSONException e) {
                                 throw new RelayException(this.getClass().getSimpleName(),
                                         "Unable to refill pairMap from Stored Pairs. Error: " + e.getMessage());
@@ -95,8 +94,6 @@ public class Host {
                         public void noStoredPairs() {
                             pairWithHost();
                         }
-
-
                     });
                 }
             } catch (IOException e) {
@@ -129,14 +126,16 @@ public class Host {
                         }
 
                         @Override
-                        public void onResponse(byte[] responseBytes) {
+                        public void onResponse(byte[] responseBytes, Map<String, List<String>> responseHeaders) {
                             throw new RelayException(this.getClass().getSimpleName(),
                                     "Unexpected Volley jsonArrayResponse. Response: " + responseBytes.toString());
                         }
 
                         @Override
-                        public void onResponse(JSONObject responseJson) {
-                            Log.d("MTE", "Completed HEAD Request");
+                        public void onResponse(JSONObject responseJson, Map<String, List<String>> responseHeaders) {
+                            if (BuildConfig.DEBUG) {
+                                Log.i("MTE", "Completed HEAD Request");
+                            }
                         }
                     });
                 }
@@ -239,8 +238,6 @@ public class Host {
         Map<String, Pair> pairMap = mteHelper.createPairMap(pairPoolSize);
         JSONArray pairMapArray = new JSONArray();
         pairMap.forEach((pairId, pair) -> {
-            if (BuildConfig.DEBUG) {
-            }
             JSONObject pairJson = new JSONObject();
             try {
                 pairJson.put("pairId", pairId)
@@ -265,7 +262,8 @@ public class Host {
                 new RelayHeaders(RelaySettings.clientId,
                         null,
                         "MKE",
-                        ""),
+                        "",
+                        null),
                 setRelayOptions(RequestMethod.POST,null)
         );
         relayWebHelper.sendJsonArray(connectionModel, null, new RWHResponseListener() {
@@ -306,11 +304,11 @@ public class Host {
                     pairMap.get(pairId).createEncoderAndDecoder();
                     JSONObject responseJson = new JSONObject();
                     try {
-                        responseJson.put("Response Code","200"); //TODO: Needs work
+                        responseJson.put("Response Code","200"); // TODO: Needs work
                     } catch (JSONException e) {
                         throw new RuntimeException(e);
                     }
-                    listener.onResponse(responseJson);
+                    listener.onResponse(responseJson, null);
                 }
                 notifyPaired();
             }
@@ -359,13 +357,17 @@ public class Host {
                 "",
                 new RelayHeaders(RelaySettings.clientId,
                         encryptBodyBytesResult.pairId,
-                        "MKE", encryptHeadersResult.encodedStr),
+                        "MKE",
+                        encryptHeadersResult.encodedStr,
+                        null),
                 setRelayOptions(RequestMethod.POST, encryptedRouteResult.pairId));
         relayWebHelper.sendBytes(relayConnectionModel, origRequest, new RWHResponseListener() {
             @Override
             public void onError(int code, String message, RelayHeaders relayHeaders) {
                 rePairCheck(code, origRequest, listener);
-                Log.d("MTE", message);
+                if (BuildConfig.DEBUG) {
+                    Log.e("MTE", message);
+                }
                 listener.onError(message);
             }
 
@@ -383,17 +385,17 @@ public class Host {
 
             @Override
             public void onByteArrayResponse(byte[] byteArrayResponse, RelayHeaders relayHeaders) {
-                // Decode Headers
-                if (relayHeaders.encryptedDecryptedHeaders != null && !relayHeaders.encryptedDecryptedHeaders.equals("")) {
-                    DecodeResult headersDecodeResult = mteHelper.decode(relayHeaders.pairId, relayHeaders.encryptedDecryptedHeaders);
-                } else {
-                    Log.d("MTE", "No encoded headers to decode.");
+                Map<String, List<String>> responseHeaders = null;
+                try {
+                    responseHeaders = MteRelayHeader.processVolleyResponseHeaders(relayHeaders, mteHelper);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
                 }
                 if (byteArrayResponse != null) {
                     DecodeResult bodyDecodeResult = mteHelper.decode(relayHeaders.pairId, byteArrayResponse);
                     storeStates();
                     rePairAttempts = 1;
-                    listener.onResponse(bodyDecodeResult.decodedBytes);
+                    listener.onResponse(bodyDecodeResult.decodedBytes, responseHeaders);
                 }
             }
         });
@@ -402,7 +404,9 @@ public class Host {
     private void rePairCheck(int code, Request origRequest, RelayResponseListener listener) {
         if (560 <= code && code <= 562) {
             if (rePairAttempts < pairPoolSize) {
-                Log.d("MTE", "Server is no longer paired with Client so we will attempt to rePair and reSend.");
+                if (BuildConfig.DEBUG) {
+                    Log.w("MTE", "Server is no longer paired with Client so we will attempt to rePair and reSend.");
+                }
                 rePairAttempts ++;
                 rePairWithHost(listener);
                 reSendRequest(origRequest, listener);

@@ -24,18 +24,27 @@
 
 package com.mte.relay;
 
+import com.android.volley.Header;
+
+import java.util.List;
+
 public class RelayHeaders {
         String clientId = "";
         String pairId = "";
         String encoderType = "";
         String encryptedDecryptedHeaders = "";
+        List<Header> responseHeaderList;
 
 
-        public RelayHeaders(String clientId, String pairId, String encoderType, String encryptedDecryptedHeaders) {
+        public RelayHeaders(String clientId,
+                            String pairId,
+                            String encoderType,
+                            String encryptedDecryptedHeaders, List<Header> responseHeaderList) {
             this.clientId = clientId;
             this.pairId = pairId;
             this.encoderType = encoderType;
             this.encryptedDecryptedHeaders = encryptedDecryptedHeaders;
+            this.responseHeaderList = responseHeaderList;
         }
 
     public RelayHeaders() {

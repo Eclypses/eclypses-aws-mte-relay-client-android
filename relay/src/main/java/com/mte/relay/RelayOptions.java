@@ -87,7 +87,6 @@ public class RelayOptions {
 
     public static RelayOptions parseMteRelayHeader(String header) {
         String[] args = header.split(",");
-
         if (args.length > 0) {
             if (args.length > 1) {
                 return new RelayOptions(args[0],
@@ -106,7 +105,7 @@ public class RelayOptions {
             }
         } else {
             // The header doesn't have any elements
-            return null; //TODO: Handle this better
+            return null;
         }
     }
 }
