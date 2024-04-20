@@ -32,15 +32,8 @@ import com.eclypses.mte.MteStatus;
 
 public class MteException extends RuntimeException {
 
-    private String name;
-    private String description;
-    private String message;
-
     public MteException(MteStatus status, String message) {
         super(new Exception(MteBase.getStatusDescription(status)));
-        this.name = MteBase.getStatusName(status);
-        this.description = MteBase.getStatusDescription(status);
-        this.message = message;
         if (BuildConfig.DEBUG) {
             Log.d("MTE", "MTE Exception. " + message +
                     ", Status: " + MteBase.getStatusName(status) +

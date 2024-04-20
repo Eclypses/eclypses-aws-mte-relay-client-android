@@ -26,7 +26,6 @@ package com.mte.relay;
 
 import android.util.Log;
 
-import com.android.volley.BuildConfig;
 import com.android.volley.Header;
 
 import org.json.JSONException;
@@ -42,29 +41,37 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-public class MteRelayHeader {
-    String type;
-    Boolean urlIsEncoded;
-    Boolean headersAreEncoded;
-    Boolean bodyIsEncoded;
-    String bodyEncodeType;
-    String clientId;
-    String pairId;
+public class NetworkHeaderHelper {
 
-    public MteRelayHeader(String type,
-                          Boolean urlIsEncoded,
-                          Boolean headersAreEncoded,
-                          Boolean bodyIsEncoded,
-                          String bodyEncodeType,
-                          String clientId,
-                          String pairId) {
-        this.type = type;
-        this.urlIsEncoded = urlIsEncoded;
-        this.headersAreEncoded = headersAreEncoded;
-        this.bodyIsEncoded = bodyIsEncoded;
-        this.bodyEncodeType = bodyEncodeType;
-        this.clientId = clientId;
-        this.pairId = pairId;
+    public static EncodeResult processRequestHeaders(MteHelper mteHelper,
+                                                     String pairId,
+                                                     String[] headersToEncode,
+                                                     Map<String, String> origHeaders) {
+
+        Map<String, String> ctHeader = new HashMap<>();
+
+        // encode original headers as necessary
+        List<String> headersToEncodeList = Arrays.asList(headersToEncode);
+        for (Map.Entry<String, String> origHeader : origHeaders.entrySet()) {
+            // Content-Type always gets encrypted if it exists
+            if (origHeader.getKey().equals("content-type") ||
+                    origHeader.getKey().equals("Content-Type")) {
+                ctHeader.put(origHeader.getKey(), origHeader.getValue());
+                break;
+            }
+            if (headersToEncodeList.contains(origHeader.getKey())) {
+                ctHeader.put(origHeader.getKey(), origHeader.getValue());
+            }
+        }
+
+        // Remove headers to be encoded from Original Headers Map
+        for (Map.Entry<String, String> headerToEncode : ctHeader.entrySet()) {
+            origHeaders.remove(headerToEncode.getKey());
+        }
+
+        JSONObject headersJson = new JSONObject(ctHeader);
+        EncodeResult encodedHeadersResult = mteHelper.encode(pairId, headersJson.toString());
+        return encodedHeadersResult;
     }
 
     public static RelayOptions getRelayHeaderValues(HttpURLConnection httpConn) {
@@ -106,7 +113,6 @@ public class MteRelayHeader {
             DecodeResult decodeResult = mteHelper.decode(responsePairId, ehHeader);
             try {
                 JSONObject decodedHeaders = new JSONObject(decodeResult.decodedStr);
-                Log.d("MTE", "Decoded Header: " + decodedHeaders);
                 Iterator<String> keysIterator = decodedHeaders.keys();
                 while (keysIterator.hasNext()) {
                     String key = keysIterator.next();

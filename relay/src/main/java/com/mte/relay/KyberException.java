@@ -44,12 +44,8 @@ public class KyberException extends RuntimeException {
         }
     }
 
-    private String name;
-    private String message;
-
     public KyberException(int status, String message) {
         super(new Exception(resolveEnum(status)));
-        this.message = message;
         if (BuildConfig.DEBUG) {
             Log.e("MTE", "MteKyber Exception. " + message +
                     ", Status: " + resolveEnum(status));
@@ -57,27 +53,27 @@ public class KyberException extends RuntimeException {
     }
 
     private static String resolveEnum(int value) {
-        String valuestr = KyberErrorCode.success.name;
+        String valueStr = KyberErrorCode.success.name;
         switch (value) {
             case MteKyber.Success:
-                valuestr = KyberErrorCode.success.name;
+                valueStr = KyberErrorCode.success.name;
             break;
             case MteKyber.EntropyFail:
-                valuestr = KyberErrorCode.randomFail.name;
+                valueStr = KyberErrorCode.randomFail.name;
             break;
             case MteKyber.InvalidPubKey:
-                valuestr = KyberErrorCode.invalidPubKey.name;
+                valueStr = KyberErrorCode.invalidPubKey.name;
                 break;
             case MteKyber.InvalidPrivKey:
-                valuestr = KyberErrorCode.invalidPrivKey.name;
+                valueStr = KyberErrorCode.invalidPrivKey.name;
                 break;
             case MteKyber.MemoryFail:
-                valuestr = KyberErrorCode.memoryFail.name;
+                valueStr = KyberErrorCode.memoryFail.name;
                 break;
             case MteKyber.InvalidCipherText:
-                valuestr = KyberErrorCode.invalidCipherText.name;
+                valueStr = KyberErrorCode.invalidCipherText.name;
                 break;
         }
-        return valuestr;
+        return valueStr;
     }
 }

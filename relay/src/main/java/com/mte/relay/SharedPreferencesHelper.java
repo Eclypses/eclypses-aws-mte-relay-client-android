@@ -26,7 +26,6 @@ package com.mte.relay;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.util.Log;
 
 public class SharedPreferencesHelper {
 

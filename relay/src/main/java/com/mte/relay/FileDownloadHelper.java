@@ -1,3 +1,27 @@
+// The MIT License (MIT)
+//
+// Copyright (c) Eclypses, Inc.
+//
+// All rights reserved.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 package com.mte.relay;
 
 import org.json.JSONException;
@@ -19,7 +43,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class RelayHttpConnectionHelper {
+public class FileDownloadHelper {
 
     private final String hostUrl;
     private String charset = "UTF-8";
@@ -30,7 +54,7 @@ public class RelayHttpConnectionHelper {
     private final String downloadPath;
     private final RelayResponseListener listener;
 
-    public RelayHttpConnectionHelper(RelayFileDownloadProperties properties, RelayResponseListener listener) throws IOException {
+    public FileDownloadHelper(FileDownloadProperties properties, RelayResponseListener listener) throws IOException {
         this.hostUrl = properties.hostUrl;
         String route = properties.route;
         this.pairId = properties.relayOptions.pairId;
@@ -51,9 +75,9 @@ public class RelayHttpConnectionHelper {
         Thread networkThread = new Thread(() -> {
             try {
                 if (httpConn.getResponseCode() == HttpURLConnection.HTTP_OK) {
-                    RelayOptions responseRelayOptions = MteRelayHeader.getRelayHeaderValues(httpConn);
+                    RelayOptions responseRelayOptions = NetworkHeaderHelper.getRelayHeaderValues(httpConn);
                     responsePairId = responseRelayOptions.pairId;
-                    Map<String, List<String>> processedHeaders = MteRelayHeader.processHttpConnResponseHeaders(httpConn,
+                    Map<String, List<String>> processedHeaders = NetworkHeaderHelper.processHttpConnResponseHeaders(httpConn,
                             mteHelper,
                             responsePairId);
                     processFileDownloadStream(downloadPath);
@@ -77,7 +101,7 @@ public class RelayHttpConnectionHelper {
     private void processFileDownloadStream(String downloadPath) throws IOException {
         InputStream inputStream = httpConn.getInputStream();
         FileOutputStream outputStream = new FileOutputStream(downloadPath);
-        byte[] buffer = new byte[RelaySettings.downloadChunkSize];
+        byte[] buffer = new byte[Settings.downloadChunkSize];
         int bytesRead;
         mteHelper.startDecrypt(responsePairId);
         while ((bytesRead = inputStream.read(buffer)) != -1) {

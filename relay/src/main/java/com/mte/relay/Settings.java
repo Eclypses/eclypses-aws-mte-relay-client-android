@@ -24,7 +24,7 @@
 
 package com.mte.relay;
 
-class RelaySettings {
+class Settings {
 
     static String clientId = "";
     static int uploadChunkSize = 65536;
