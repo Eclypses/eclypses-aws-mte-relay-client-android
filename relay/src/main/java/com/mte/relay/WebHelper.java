@@ -47,22 +47,21 @@
     import java.util.HashMap;
     import java.util.Map;
 
-    public class RelayWebHelper {
-        private final String TAG = this.getClass().getSimpleName();
+    public class WebHelper {
         private final String CONTENT_TYPE_KEY = "content-type";
-        public static RelayWebHelper instance;
+        public static WebHelper instance;
         private static Context ctx;
         private RequestQueue requestQueue;
 
-        public static RelayWebHelper getInstance(Context ctx) throws IOException {
+        public static WebHelper getInstance(Context ctx) throws IOException {
             if (instance == null) {
-                instance = new RelayWebHelper(ctx);
+                instance = new WebHelper(ctx);
             }
             return instance;
         }
 
-        public RelayWebHelper(Context ctx) throws IOException {
-            this.ctx = ctx;
+        public WebHelper(Context ctx) {
+            WebHelper.ctx = ctx;
             requestQueue = getRequestQueue();
         }
 
@@ -213,10 +212,10 @@
                     continue;
                 }
                 if (header.getName().equals("x-mte-relay-eh")) {
-                    // Decrypt Headers
                     responseHeaders.encryptedDecryptedHeaders = header.getValue();
                 }
             }
+            responseHeaders.responseHeaderList = response.allHeaders;
         }
 
         private static RelayHeaders createNewRelayResponseHeaders(RelayHeaders responseHeaders) {
@@ -224,7 +223,8 @@
                     responseHeaders.clientId,
                     responseHeaders.pairId,
                     responseHeaders.encoderType,
-                    responseHeaders.encryptedDecryptedHeaders);
+                    responseHeaders.encryptedDecryptedHeaders,
+                    responseHeaders.responseHeaderList);
         }
 
         private static String processErrorResponseBody(VolleyError error) {
@@ -232,6 +232,7 @@
             try {
                 body = new String(error.networkResponse.data, "UTF-8");
             } catch (UnsupportedEncodingException e) {
+
                 Log.d("MTE", "Unable to convert error response body to String");
             }
             return body;

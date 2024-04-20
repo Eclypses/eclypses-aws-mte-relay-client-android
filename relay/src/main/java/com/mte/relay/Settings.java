@@ -24,28 +24,11 @@
 
 package com.mte.relay;
 
-public class MteRelayHeader {
-    String type;
-    Boolean urlIsEncoded;
-    Boolean headersAreEncoded;
-    Boolean bodyIsEncoded;
-    String bodyEncodeType;
-    String clientId;
-    String pairId;
+class Settings {
 
-    public MteRelayHeader(String type,
-                          Boolean urlIsEncoded,
-                          Boolean headersAreEncoded,
-                          Boolean bodyIsEncoded,
-                          String bodyEncodeType,
-                          String clientId,
-                          String pairId) {
-        this.type = type;
-        this.urlIsEncoded = urlIsEncoded;
-        this.headersAreEncoded = headersAreEncoded;
-        this.bodyIsEncoded = bodyIsEncoded;
-        this.bodyEncodeType = bodyEncodeType;
-        this.clientId = clientId;
-        this.pairId = pairId;
-    }
+    static String clientId = "";
+    static int uploadChunkSize = 65536;
+    static int downloadChunkSize = 65536;
+    static String licenseCompanyName = "Eclypses Inc";
+    static String licenseKey = "9eHOohOm/GwY01xbvNTL9B+1";
 }

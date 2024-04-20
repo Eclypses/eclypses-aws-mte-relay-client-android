@@ -27,6 +27,8 @@
     import android.content.Context;
     import android.util.Log;
 
+    import com.android.volley.BuildConfig;
+
     import org.json.JSONException;
     import org.json.JSONObject;
 
@@ -167,7 +169,10 @@
                             "Unable to remove stored Host. ");
                 }
             } else {
-                Log.d("MTE", "Found no stored host file " + encryptedHostFilename + " to remove.");
+                if (BuildConfig.DEBUG) {
+                    Log.i("MTE", "Found no stored host file " + encryptedHostFilename + " to remove.");
+                }
+
             }
         }
 

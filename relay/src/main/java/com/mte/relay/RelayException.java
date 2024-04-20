@@ -26,17 +26,15 @@ package com.mte.relay;
 
 import android.util.Log;
 
-public class RelayException extends RuntimeException {
+import com.android.volley.BuildConfig;
 
-    private String className;
-    private String message;
+public class RelayException extends RuntimeException {
 
     public RelayException(String className, String message) {
         super(new Exception(message));
-        this.className = className;
-        this.message = message;
-
-        Log.d("MTE", "Relay Exception in " + className +
-                ". Error: " + message);
+        if (BuildConfig.DEBUG) {
+            Log.d("MTE", "Relay Exception in " + className +
+                    ". Error: " + message);
+        }
     }
 }

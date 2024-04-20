@@ -29,14 +29,11 @@ import android.content.Context;
 import com.android.volley.Request;
 import com.eclypses.mte.MteBase;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -55,32 +52,32 @@ public class Relay {
 
     private Relay(Context context, String[] relayHosts) throws IOException {
         this.relayHosts = relayHosts;
-        if (!MteBase.initLicense(RelaySettings.licenseCompanyName, RelaySettings.licenseKey)) {
+        if (!MteBase.initLicense(Settings.licenseCompanyName, Settings.licenseKey)) {
             throw new RelayException(getClass().getSimpleName(), "MTE License Check Failed");
         }
         hosts = new HashMap<>();
         for (String host : relayHosts) {
-           Host h = new Host(context, host);
-           hosts.put(host, h);
+            Host h = new Host(context, host);
+            hosts.put(host, h);
         }
     }
 
-    public <T> void addToMteRequestQueue(Request<T> req, RelayResponseListener listener) {
+    public <T> void addToMteRequestQueue(Request<T> req, String[] headersToEncrypt, RelayResponseListener listener) {
         Host host = hosts.get(resolveHost());
-        Objects.requireNonNull(host).sendRequest(req, new RelayResponseListener() {
+        Objects.requireNonNull(host).sendRequest(req, headersToEncrypt, new RelayResponseListener() {
             @Override
             public void onError(String message) {
                 listener.onError(message);
             }
 
             @Override
-            public void onResponse(byte[] responseBytes) {
-                listener.onResponse(responseBytes);
+            public void onResponse(byte[] responseBytes, Map<String, List<String>> responseHeaders) {
+                listener.onResponse(responseBytes, responseHeaders);
             }
 
             @Override
-            public void onResponse(JSONObject responseJson) {
-                listener.onResponse(responseJson);
+            public void onResponse(JSONObject responseJson, Map<String, List<String>> responseHeaders) {
+                listener.onResponse(responseJson, responseHeaders);
             }
         });
     }

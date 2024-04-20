@@ -30,7 +30,6 @@ import android.util.Log;
 import com.android.volley.AuthFailureError;
 import com.android.volley.BuildConfig;
 import com.android.volley.Request;
-//    import com.eclypses.mte.BuildConfig;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -44,7 +43,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class Host {
@@ -54,17 +53,16 @@ public class Host {
     String hostUrl, hostUrlB64;
     private HostStorageHelper hostStorageHelper;
     private final MteHelper mteHelper;
-    private final RelayWebHelper relayWebHelper;
+    private final WebHelper webHelper;
     private static final int pairPoolSize = 3;
     private final Object lock = new Object();
-
     private int rePairAttempts = 1;
 
     public Host(Context ctx, String hostUrl) throws IOException {
         this.ctx = ctx;
         this.hostUrl = hostUrl;
         this.hostUrlB64 = Base64.getUrlEncoder().encodeToString(hostUrl.getBytes());
-        relayWebHelper = RelayWebHelper.getInstance(ctx);
+        webHelper = WebHelper.getInstance(ctx);
         mteHelper = new MteHelper();
         Thread storageThread = new Thread(() -> {
             try {
@@ -75,9 +73,9 @@ public class Host {
                             JSONObject storedPairs;
                             try {
                                 storedPairs = new JSONObject(storedHostsStr);
-                                RelaySettings.clientId = storedPairs.getString("clientId");
+                                Settings.clientId = storedPairs.getString("clientId");
                                 String pairMapStates = storedPairs.getString("pairMapStates");
-                                if (pairMapStates != "") {
+                                if (!pairMapStates.isEmpty()) {
                                     boolean paired = mteHelper.refillPairMap(pairMapStates);
                                     if (paired) {
                                         notifyPaired();
@@ -85,7 +83,6 @@ public class Host {
                                         pairWithHost();
                                     }
                                 }
-
                             } catch (JSONException e) {
                                 throw new RelayException(this.getClass().getSimpleName(),
                                         "Unable to refill pairMap from Stored Pairs. Error: " + e.getMessage());
@@ -95,8 +92,6 @@ public class Host {
                         public void noStoredPairs() {
                             pairWithHost();
                         }
-
-
                     });
                 }
             } catch (IOException e) {
@@ -129,14 +124,16 @@ public class Host {
                         }
 
                         @Override
-                        public void onResponse(byte[] responseBytes) {
+                        public void onResponse(byte[] responseBytes, Map<String, List<String>> responseHeaders) {
                             throw new RelayException(this.getClass().getSimpleName(),
                                     "Unexpected Volley jsonArrayResponse. Response: " + responseBytes.toString());
                         }
 
                         @Override
-                        public void onResponse(JSONObject responseJson) {
-                            Log.d("MTE", "Completed HEAD Request");
+                        public void onResponse(JSONObject responseJson, Map<String, List<String>> responseHeaders) {
+                            if (BuildConfig.DEBUG) {
+                                Log.i("MTE", "Completed HEAD Request");
+                            }
                         }
                     });
                 }
@@ -149,7 +146,7 @@ public class Host {
         JSONObject storedPairs;
         try {
             storedPairs = new JSONObject(hostStorageHelper.getStoredPairsForHost(hostUrlB64));
-            RelaySettings.clientId = storedPairs.getString("clientId");
+            Settings.clientId = storedPairs.getString("clientId");
             boolean paired = mteHelper.refillPairMap(storedPairs.getString("pairMapStates"));
             if (paired) {
                 notifyPaired();
@@ -160,10 +157,10 @@ public class Host {
         }
     }
 
-    public <T> void sendRequest(Request<T> req, RelayResponseListener listener) {
+    public <T> void sendRequest(Request<T> req, String[] headersToEncrypt, RelayResponseListener listener) {
         Thread sendingTread = new Thread(() -> {
             try {
-                sendUpdatedRequest(req, listener);
+                sendUpdatedRequest(req, headersToEncrypt, listener);
             } catch (InterruptedException | UnsupportedEncodingException e) {
                 throw new RelayException(getClass().getSimpleName(),
                         "sendRequestException: Error: " + e.getMessage());
@@ -172,10 +169,10 @@ public class Host {
         sendingTread.start();
     }
 
-    public <T> void reSendRequest(Request<T> req, RelayResponseListener listener) {
+    public <T> void reSendRequest(Request<T> req, String[] headersToEncrypt, RelayResponseListener listener) {
         Thread sendingTread = new Thread(() -> {
             try {
-                sendUpdatedRequest(req, listener);
+                sendUpdatedRequest(req, headersToEncrypt, listener);
             } catch (InterruptedException | UnsupportedEncodingException e) {
                 throw new RelayException(getClass().getSimpleName(),
                         "reSendRequestException: Error: " + e.getMessage());
@@ -187,7 +184,7 @@ public class Host {
     RelayOptions setRelayOptions(String requestMethod, String pairId) {
         boolean bodyIsEncoded = requestMethod == "POST" ? true : false;
         return new RelayOptions(
-                RelaySettings.clientId,
+                Settings.clientId,
                 pairId,
                 "MKE",
                 true,
@@ -207,7 +204,7 @@ public class Host {
                 new RelayHeaders(),
                 setRelayOptions(RequestMethod.HEAD, null)
         );
-        relayWebHelper.sendJson(connectionModel, null, new RWHResponseListener() {
+        webHelper.sendJson(connectionModel, null, new RWHResponseListener() {
             @Override
             public void onError(int code, String message, RelayHeaders relayHeaders) {
                 throw new RelayException(this.getClass().getSimpleName(),
@@ -216,7 +213,7 @@ public class Host {
 
             @Override
             public void onJsonResponse(JSONObject response, RelayHeaders relayHeaders) {
-                RelaySettings.clientId = relayHeaders.clientId;
+                Settings.clientId = relayHeaders.clientId;
                 SharedPreferencesHelper.saveString(ctx, "ClientId", relayHeaders.clientId);
                 pairWithHost(hostUrl, listener);
             }
@@ -239,8 +236,6 @@ public class Host {
         Map<String, Pair> pairMap = mteHelper.createPairMap(pairPoolSize);
         JSONArray pairMapArray = new JSONArray();
         pairMap.forEach((pairId, pair) -> {
-            if (BuildConfig.DEBUG) {
-            }
             JSONObject pairJson = new JSONObject();
             try {
                 pairJson.put("pairId", pairId)
@@ -262,13 +257,14 @@ public class Host {
                 pairMapArray,
                 null,
                 null,
-                new RelayHeaders(RelaySettings.clientId,
+                new RelayHeaders(Settings.clientId,
                         null,
                         "MKE",
-                        ""),
+                        "",
+                        null),
                 setRelayOptions(RequestMethod.POST,null)
         );
-        relayWebHelper.sendJsonArray(connectionModel, null, new RWHResponseListener() {
+        webHelper.sendJsonArray(connectionModel, null, new RWHResponseListener() {
             @Override
             public void onError(int code, String message, RelayHeaders relayHeaders) {
                 throw new RelayException(this.getClass().getSimpleName(),
@@ -283,7 +279,7 @@ public class Host {
 
             @Override
             public void onJsonArrayResponse(JSONArray response, RelayHeaders relayHeaders) {
-                RelaySettings.clientId = relayHeaders.clientId;
+                Settings.clientId = relayHeaders.clientId;
                 for (int i = 0; i < response.length(); i++) {
                     JSONObject pair;
                     String pairId;
@@ -306,11 +302,11 @@ public class Host {
                     pairMap.get(pairId).createEncoderAndDecoder();
                     JSONObject responseJson = new JSONObject();
                     try {
-                        responseJson.put("Response Code","200"); //TODO: Needs work
+                        responseJson.put("Response Code","200");
                     } catch (JSONException e) {
                         throw new RuntimeException(e);
                     }
-                    listener.onResponse(responseJson);
+                    listener.onResponse(responseJson, null);
                 }
                 notifyPaired();
             }
@@ -329,7 +325,9 @@ public class Host {
         notify();
     }
 
-    synchronized private void sendUpdatedRequest(Request origRequest, RelayResponseListener listener) throws InterruptedException, UnsupportedEncodingException {
+    synchronized private void sendUpdatedRequest(Request origRequest,
+                                                 String[] headersToEncrypt,
+                                                 RelayResponseListener listener) throws InterruptedException, UnsupportedEncodingException {
         while (!hostPaired) {
             wait();
         }
@@ -339,15 +337,13 @@ public class Host {
         try {
             URL origUrl = new URL(origUrlStr);
             origRoute = origUrl.getPath().substring(1); // remove the preceding '/'
-
         } catch (MalformedURLException e) {
             throw new RelayException(this.getClass().getSimpleName(),
                     "MalformedUrlException. Error: " + e.getMessage());
         }
-
         EncodeResult encryptedRouteResult = mteHelper.encode(null, origRoute);
         String urlEncodedRoute = URLEncoder.encode(encryptedRouteResult.encodedStr, StandardCharsets.UTF_8.toString());
-        EncodeResult encryptHeadersResult = encryptHeaders(encryptedRouteResult.pairId, origRequest);
+        EncodeResult encryptHeadersResult = encryptHeaders(encryptedRouteResult.pairId, origRequest, headersToEncrypt);
         EncodeResult encryptBodyBytesResult = encryptBodyBytes(encryptHeadersResult.pairId, origRequest);
         RelayConnectionModel relayConnectionModel = new RelayConnectionModel(
                 hostUrl,
@@ -357,15 +353,19 @@ public class Host {
                 null,
                 encryptBodyBytesResult.encodedBytes,
                 "",
-                new RelayHeaders(RelaySettings.clientId,
+                new RelayHeaders(Settings.clientId,
                         encryptBodyBytesResult.pairId,
-                        "MKE", encryptHeadersResult.encodedStr),
+                        "MKE",
+                        encryptHeadersResult.encodedStr,
+                        null),
                 setRelayOptions(RequestMethod.POST, encryptedRouteResult.pairId));
-        relayWebHelper.sendBytes(relayConnectionModel, origRequest, new RWHResponseListener() {
+        webHelper.sendBytes(relayConnectionModel, origRequest, new RWHResponseListener() {
             @Override
             public void onError(int code, String message, RelayHeaders relayHeaders) {
-                rePairCheck(code, origRequest, listener);
-                Log.d("MTE", message);
+                rePairCheck(code, origRequest, headersToEncrypt, listener);
+                if (BuildConfig.DEBUG) {
+                    Log.e("MTE", message);
+                }
                 listener.onError(message);
             }
 
@@ -383,29 +383,31 @@ public class Host {
 
             @Override
             public void onByteArrayResponse(byte[] byteArrayResponse, RelayHeaders relayHeaders) {
-                // Decode Headers
-                if (relayHeaders.encryptedDecryptedHeaders != null && !relayHeaders.encryptedDecryptedHeaders.equals("")) {
-                    DecodeResult headersDecodeResult = mteHelper.decode(relayHeaders.pairId, relayHeaders.encryptedDecryptedHeaders);
-                } else {
-                    Log.d("MTE", "No encoded headers to decode.");
+                Map<String, List<String>> responseHeaders;
+                try {
+                    responseHeaders = NetworkHeaderHelper.processVolleyResponseHeaders(relayHeaders, mteHelper);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
                 }
                 if (byteArrayResponse != null) {
                     DecodeResult bodyDecodeResult = mteHelper.decode(relayHeaders.pairId, byteArrayResponse);
                     storeStates();
                     rePairAttempts = 1;
-                    listener.onResponse(bodyDecodeResult.decodedBytes);
+                    listener.onResponse(bodyDecodeResult.decodedBytes, responseHeaders);
                 }
             }
         });
     }
 
-    private void rePairCheck(int code, Request origRequest, RelayResponseListener listener) {
+    private void rePairCheck(int code, Request origRequest, String[] headersToEncrypt, RelayResponseListener listener) {
         if (560 <= code && code <= 562) {
             if (rePairAttempts < pairPoolSize) {
-                Log.d("MTE", "Server is no longer paired with Client so we will attempt to rePair and reSend.");
+                if (BuildConfig.DEBUG) {
+                    Log.w("MTE", "Server is no longer paired with Client so we will attempt to rePair and reSend.");
+                }
                 rePairAttempts ++;
                 rePairWithHost(listener);
-                reSendRequest(origRequest, listener);
+                reSendRequest(origRequest, headersToEncrypt, listener);
             }
         }
     }
@@ -425,29 +427,21 @@ public class Host {
             JSONObject stateToStore = new JSONObject();
             stateToStore
                     .put("pairMapStates", pairMapStates)
-                    .put("clientId", RelaySettings.clientId);
+                    .put("clientId", Settings.clientId);
             hostStorageHelper.saveHostToFile(stateToStore.toString());
         } catch (JSONException e) {
             throw new RelayException(getClass().getSimpleName(), e.getMessage());
         }
     }
 
-    private EncodeResult encryptHeaders(String pairId, Request origRequest) {
-        // Mte Encode Content-Type header and any other headers in the list
-        Map<String, String> ctHeader = new HashMap<>();
+    private EncodeResult encryptHeaders(String pairId, Request origRequest, String[] headersToEncrypt) {
+        EncodeResult encodeResult;
         try {
-            Map<String, String> headers = origRequest.getHeaders();
-            for (Map.Entry<String, String> header : headers.entrySet())
-                if (header.getKey().equals("content-type")) {
-                    ctHeader.put(header.getKey(), header.getValue());
-                    break;
-                }
+            encodeResult = NetworkHeaderHelper.processRequestHeaders(mteHelper, pairId, headersToEncrypt, origRequest.getHeaders());
         } catch (AuthFailureError e) {
             throw new RelayException(getClass().getSimpleName(), e.getMessage());
         }
-        // TODO: Set or encrypt additional headers
-        JSONObject headersJson = new JSONObject(ctHeader);
-        return mteHelper.encode(pairId, headersJson.toString());
+        return encodeResult;
     }
 
     private EncodeResult encryptBodyBytes(String pairId, Request origRequest) {
@@ -483,8 +477,8 @@ public class Host {
                         reqProperties.origHeaders,
                         setRelayOptions(RequestMethod.POST, pairId),
                         reqProperties.relayStreamCallback);
-                RelayFileUploadHelper relayFileUploadHelper = new RelayFileUploadHelper(properties, listener);
-                relayFileUploadHelper.encryptAndSend(this::storeStates);
+                FileUploadHelper fileUploadHelper = new FileUploadHelper(properties, listener);
+                fileUploadHelper.encryptAndSend(this::storeStates);
             } catch (IOException  | MteException e) {
                 listener.onError(getClass().getSimpleName() + " Exception. Error: " +e.getMessage());
             }
@@ -503,7 +497,7 @@ public class Host {
         }
         // Get PairId to do this download
         String pairId = mteHelper.getNextPairId();
-        RelayFileDownloadProperties properties = new RelayFileDownloadProperties(
+        FileDownloadProperties properties = new FileDownloadProperties(
                 hostUrl,
                 reqProperties.route,
                 reqProperties.downloadPath,
@@ -511,7 +505,7 @@ public class Host {
                 reqProperties.headersToEncrypt,
                 reqProperties.origHeaders,
                 setRelayOptions(RequestMethod.GET, pairId));
-        RelayHttpConnectionHelper connectionHelper = new RelayHttpConnectionHelper(properties, listener);
+        FileDownloadHelper connectionHelper = new FileDownloadHelper(properties, listener);
         connectionHelper.downloadFile(this::storeStates);
     }
 

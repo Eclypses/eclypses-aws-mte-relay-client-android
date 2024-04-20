@@ -25,7 +25,6 @@
 package com.mte.relay;
 
 import android.util.Base64;
-import android.util.Log;
 import com.android.volley.BuildConfig;
 import com.eclypses.mte.MteKyber;
 import com.eclypses.mte.MteBase;

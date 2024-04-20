@@ -24,10 +24,9 @@
 
     package com.mte.relay;
 
-    import android.content.Context;
+
     import android.security.keystore.KeyGenParameterSpec;
     import android.security.keystore.KeyProperties;
-    import android.util.Log;
 
     import java.io.IOException;
     import java.nio.charset.StandardCharsets;
@@ -36,7 +35,6 @@
     import java.security.KeyStoreException;
     import java.security.NoSuchAlgorithmException;
     import java.security.NoSuchProviderException;
-    import java.security.SecureRandom;
     import java.security.UnrecoverableEntryException;
     import java.security.cert.CertificateException;
 
@@ -47,10 +45,10 @@
 
     public class KeyHelper {
 
-        private String KEY_ALIAS;
+        private final String KEY_ALIAS;
         private static final String KEYSTORE_PROVIDER = "AndroidKeyStore";
         private static final String TRANSFORMATION = "AES/CBC/PKCS7Padding";
-        private KeyStore keyStore;
+        private final KeyStore keyStore;
 
         public KeyHelper(String hostUrlB64) {
             this.KEY_ALIAS = hostUrlB64;

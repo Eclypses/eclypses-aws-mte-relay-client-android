@@ -1,6 +1,28 @@
-package com.mte.relay;
+// The MIT License (MIT)
+//
+// Copyright (c) Eclypses, Inc.
+//
+// All rights reserved.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 
-import android.util.Log;
+package com.mte.relay;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -21,7 +43,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class RelayHttpConnectionHelper {
+public class FileDownloadHelper {
 
     private final String hostUrl;
     private String charset = "UTF-8";
@@ -32,7 +54,7 @@ public class RelayHttpConnectionHelper {
     private final String downloadPath;
     private final RelayResponseListener listener;
 
-    public RelayHttpConnectionHelper(RelayFileDownloadProperties properties, RelayResponseListener listener) throws IOException {
+    public FileDownloadHelper(FileDownloadProperties properties, RelayResponseListener listener) throws IOException {
         this.hostUrl = properties.hostUrl;
         String route = properties.route;
         this.pairId = properties.relayOptions.pairId;
@@ -53,11 +75,15 @@ public class RelayHttpConnectionHelper {
         Thread networkThread = new Thread(() -> {
             try {
                 if (httpConn.getResponseCode() == HttpURLConnection.HTTP_OK) {
-                    processResponseHeaders();
+                    RelayOptions responseRelayOptions = NetworkHeaderHelper.getRelayHeaderValues(httpConn);
+                    responsePairId = responseRelayOptions.pairId;
+                    Map<String, List<String>> processedHeaders = NetworkHeaderHelper.processHttpConnResponseHeaders(httpConn,
+                            mteHelper,
+                            responsePairId);
                     processFileDownloadStream(downloadPath);
 
                     JSONObject jsonResponse = getJsonResponse(downloadPath);
-                    listener.onResponse(jsonResponse);
+                    listener.onResponse(jsonResponse, processedHeaders);
                     callback.onCallback();
                 } else {
                     listener.onError(httpConn.getResponseMessage());
@@ -75,7 +101,7 @@ public class RelayHttpConnectionHelper {
     private void processFileDownloadStream(String downloadPath) throws IOException {
         InputStream inputStream = httpConn.getInputStream();
         FileOutputStream outputStream = new FileOutputStream(downloadPath);
-        byte[] buffer = new byte[RelaySettings.downloadChunkSize];
+        byte[] buffer = new byte[Settings.downloadChunkSize];
         int bytesRead;
         mteHelper.startDecrypt(responsePairId);
         while ((bytesRead = inputStream.read(buffer)) != -1) {
@@ -97,32 +123,6 @@ public class RelayHttpConnectionHelper {
         jsonResponse.put("File Size", Files.size(path));
         jsonResponse.put("Download Location", downloadPath);
         return jsonResponse;
-    }
-
-    private void processResponseHeaders() throws IOException {
-        // Decode encryptedHeaders
-        int status = httpConn.getResponseCode();
-        if (status == HttpURLConnection.HTTP_OK) {
-            // Get Headers
-            String ehHeader = httpConn.getHeaderField("x-mte-relay-eh");
-            String relayHeaderStr = httpConn.getHeaderField("x-mte-relay");
-            if (relayHeaderStr == null) {
-                listener.onError("No x-mte-relay response header.");
-                return;
-            }
-            RelayOptions responseRelayOptions = RelayOptions.parseMteRelayHeader(relayHeaderStr);
-            if (responseRelayOptions.pairId == null || responseRelayOptions.pairId == "") {
-                listener.onError("No pairId in x-mte-relay response header.");
-                return;
-            }
-            responsePairId = responseRelayOptions.pairId;
-            if (ehHeader != null && ehHeader != "") {
-                DecodeResult decodeResult = mteHelper.decode(responsePairId, ehHeader);
-            }
-
-            Map<String, List<String>> headers = httpConn.getHeaderFields();
-//        headers.remove("x-mte-relay-eh"); // TODO: Remove any additional Relay Headers
-        }
     }
 
     private URL encodeRoute(String route, String pairId) throws UnsupportedEncodingException, MalformedURLException {

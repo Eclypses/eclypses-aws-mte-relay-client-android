@@ -38,12 +38,10 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class RelayFileUploadHelper {
+public class FileUploadHelper {
 
     private final String hostUrl;
     private final String route;
@@ -52,26 +50,18 @@ public class RelayFileUploadHelper {
     private final HttpURLConnection httpConn;
     private String charset = "UTF-8";
     private final OutputStream outputStream;
-
     private final MteHelper mteHelper;
-
     private final String pairId;
-
     private final RelayResponseListener listener;
-
-    private File fileToUpload;
-    private int relayContentLength;
-
-    private RelayStreamCallback relayStreamCallback;
-
+    private final RelayStreamCallback relayStreamCallback;
     private PipedOutputStream pipedOutputStream;
     private PipedInputStream pipedInputStream;
 
-    public RelayFileUploadHelper(RelayFileUploadProperties properties, RelayResponseListener listener) throws IOException {
+    public FileUploadHelper(RelayFileUploadProperties properties, RelayResponseListener listener) throws IOException {
 
         this.relayStreamCallback = properties.relayStreamCallback;
-        this.fileToUpload = properties.fileToUpload;
-        // Check that file size is less than2 gig with a little room for FinishEncrypt bytes
+        File fileToUpload = properties.fileToUpload;
+        // Check that file size is less than 2 gig with a little room for FinishEncrypt bytes
         if (fileToUpload.length() > 2147480000) {
             throw new RelayException("RelayFileUploadHelper", "File to upload too large.");
         }
@@ -81,12 +71,14 @@ public class RelayFileUploadHelper {
         this.pairId = properties.relayOptions.pairId;
         this.mteHelper = properties.mteHelper;
         this.url = encodeRoute();
-
         this.listener = listener;
 
         int origContentLength = Integer.parseInt(properties.origHeaders.get("Content-Length"));
-        relayContentLength = origContentLength + getEncryptFinishBytes();
-        EncodeResult encodedHeadersResult = encodeHeaders(properties.headersToEncrypt, properties.origHeaders);
+        int relayContentLength = origContentLength + getEncryptFinishBytes();
+        EncodeResult encodedHeadersResult = NetworkHeaderHelper.processRequestHeaders(mteHelper,
+                pairId,
+                properties.headersToEncrypt,
+                properties.origHeaders);
 
         httpConn = (HttpURLConnection) url.openConnection();
         httpConn.setUseCaches(false);
@@ -105,39 +97,16 @@ public class RelayFileUploadHelper {
         return new URL(urlStr);
     }
 
-    private EncodeResult encodeHeaders(String[] headersToEncode, Map<String, String> origHeaders) {
-
-        Map<String, String> ctHeader = new HashMap<>();
-
-        // encode original headers as necessary
-        List<String> headersToEncodeList = Arrays.asList(headersToEncode);
-        for (Map.Entry<String, String> origHeader : origHeaders.entrySet()) {
-            if (headersToEncodeList.contains(origHeader.getKey())) {
-                ctHeader.put(origHeader.getKey(), origHeader.getValue());
-            }
-        }
-
-        // Remove headers to be encoded from Original Headers Map
-        for (Map.Entry<String, String> headerToEncode : ctHeader.entrySet()) {
-            origHeaders.remove(headerToEncode.getKey());
-        }
-
-        JSONObject headersJson = new JSONObject(ctHeader);
-        EncodeResult encodedHeadersResult = mteHelper.encode(pairId, headersJson.toString());
-        return encodedHeadersResult;
-    }
-
     public void encryptAndSend(StoreStatesCallback callback) throws IOException {
 
         // Start by calling StartEncrypt
         mteHelper.startEncrypt(pairId);
         getPipedStreams();
 
-
         // Start thread to encrypt File Bytes in chunks
         Thread encryptThread = new Thread(() -> {
             try {
-                byte[] buffer = new byte[RelaySettings.uploadChunkSize];
+                byte[] buffer = new byte[Settings.uploadChunkSize];
                 int bytesRead;
 
                 while ((bytesRead = pipedInputStream.read(buffer)) != -1) {
@@ -153,7 +122,7 @@ public class RelayFileUploadHelper {
 
             } catch (IOException e) {
                 String threadName = Thread.currentThread().getName();
-                throw new RelayException("RelayFileUploadHelper",
+                throw new RelayException(this.getClass().getSimpleName(),
                         "Exception in " + threadName + ". Exception: " + e.getMessage());
             }
         });
@@ -162,12 +131,11 @@ public class RelayFileUploadHelper {
         Thread readFileThread = new Thread(() -> {
             relayStreamCallback.getRequestBodyStream(pipedOutputStream);
             try {
-
-                // Pause this thread until the encrypThread is finished, to keep the OutputStream open.
+                // Pause this thread until the encryptThread is finished, to keep the OutputStream open.
                 encryptThread.join();
             } catch (InterruptedException e) {
                 String threadName = Thread.currentThread().getName();
-                throw new RelayException("RelayFileUploadHelper",
+                throw new RelayException(this.getClass().getSimpleName(),
                         "Exception in " + threadName + ". Exception: " + e.getMessage());
             }
         });
@@ -178,7 +146,7 @@ public class RelayFileUploadHelper {
             encryptThread.join();
         } catch (InterruptedException e) {
             String threadName = Thread.currentThread().getName();
-            throw new RelayException("RelayFileUploadHelper",
+            throw new RelayException(this.getClass().getSimpleName(),
                     "Exception in " + threadName + ". Exception: " + e.getMessage());
         }
 
@@ -193,32 +161,18 @@ public class RelayFileUploadHelper {
     }
 
     private int getEncryptFinishBytes() {
-       return mteHelper.getEncryptFinishBytes();
+        return mteHelper.getEncryptFinishBytes();
     }
 
     public void getResponse(StoreStatesCallback callback) throws IOException {
 
-        // checks server's status code first
         int status = httpConn.getResponseCode();
         if (status == HttpURLConnection.HTTP_OK) {
-            String responsePairId;
-            // Get Headers
-            String ehHeader = httpConn.getHeaderField("x-mte-relay-eh");
-            String relayHeaderStr = httpConn.getHeaderField("x-mte-relay");
-            if (relayHeaderStr == null) {
-                listener.onError("No x-mte-relay response header.");
-                return;
-            }
-            RelayOptions responseRelayOptions = RelayOptions.parseMteRelayHeader(relayHeaderStr);
-            if (responseRelayOptions.pairId == null || responseRelayOptions.pairId == "") {
-                listener.onError("No pairId in x-mte-relay response header.");
-                return;
-            }
-            responsePairId = responseRelayOptions.pairId;
-            if (ehHeader != null && ehHeader != "") {
-                DecodeResult decodeResult = mteHelper.decode(responsePairId, ehHeader);
-            }
-
+            RelayOptions responseRelayOptions = NetworkHeaderHelper.getRelayHeaderValues(httpConn);
+            String responsePairId = responseRelayOptions.pairId;
+            Map<String, List<String>> processedHeaders = NetworkHeaderHelper.processHttpConnResponseHeaders(httpConn,
+                    mteHelper,
+                    responsePairId);
             InputStream inputStream = httpConn.getInputStream();
             StringBuilder sb = new StringBuilder();
             byte[] buffer = new byte[1024];
@@ -226,15 +180,21 @@ public class RelayFileUploadHelper {
             int bytesRead;
             while ((bytesRead = inputStream.read(buffer)) != -1) {
                 byte[] decrypted = new byte[bytesRead];
-                int bytesDecrypted = mteHelper.decryptChunk(responsePairId, buffer, 0, bytesRead, decrypted,0);
+                int bytesDecrypted = mteHelper.decryptChunk(responsePairId,
+                        buffer,
+                        0,
+                        bytesRead,
+                        decrypted,
+                        0);
                 sb.append(new String(decrypted, charset), 0, bytesDecrypted);
             }
             DecodeResult finishEncryptResult = mteHelper.finishDecrypt(responsePairId);
-            if (finishEncryptResult.decodedBytes != null && finishEncryptResult.decodedBytes.length > 0) {
+            if (finishEncryptResult.decodedBytes != null &&
+                    finishEncryptResult.decodedBytes.length > 0) {
                 sb.append(new String(finishEncryptResult.decodedBytes, charset));
             }
             try {
-                listener.onResponse(new JSONObject(sb.toString()));
+                listener.onResponse(new JSONObject(sb.toString()), processedHeaders);
                 callback.onCallback();
             } catch (JSONException e) {
                 throw new RelayException("RelayFileUploadHelper", "Unable to convert response to JSON. Exception: " + e);
