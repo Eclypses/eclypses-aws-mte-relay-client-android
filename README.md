@@ -177,6 +177,33 @@ relay.downloadFile(AppSettings.relayHosts[0], reqProperties, new RelayResponseLi
 });
 ```
 <br><br>
+
+# RePair with Server
+- Most situations where Client and Server get out of sync are handled automatically but a function is available to trigger a rePair attempt.
+- Call 'relay.rePairWithRelayServer' passing ...
+   - the Url of the server with which you wish to rePair,
+   - and a new instance of RelayResponseListener
+<br><br>
+
+``` java
+relay.rePairWithRelayServer(Relay Server Url, new RelayResponseListener() {
+   @Override
+   public void onError(String message) {
+         // Handle errors appropriately
+   }
+
+   @Override
+   public void onResponse(byte[] bytes, Map<String, List<String>> responseHeaders) {
+         // We don't expect to receive the response as a byte[].
+   }
+
+   @Override
+   public void onResponse(JSONObject jsonObject, Map<String, List<String>> responseHeaders) {
+         // Returns returns a JSONObject, and the response headers as a Map
+   }
+});
+```
+<br><br>
 <div style="page-break-after: always; break-after: page;"></div>
 
 

@@ -98,7 +98,7 @@ public class Relay {
         return host;
     }
 
-    public void rePairWithHost(String serverUrl, RelayResponseListener listener) {
+    public void rePairWithRelayServer(String serverUrl, RelayResponseListener listener) {
         Host host = getHost(serverUrl, listener);
         Objects.requireNonNull(host).rePairWithHost(listener);
     }
