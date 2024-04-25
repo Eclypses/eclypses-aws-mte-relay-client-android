@@ -10,8 +10,9 @@ android {
         minSdk 26
         targetSdk 33
         versionCode 1
-        versionName "4.1.0"
-        setProperty("archivesBaseName", "package-${archivesBaseName}-$versionName")
+        versionName "3.4.6"
+//        setProperty("archivesBaseName", "package-${archivesBaseName}-$versionName")
+        setProperty("archivesBaseName", "eclypses-aws-mte-relay-client-android-$versionName")
     }
 
     buildFeatures {

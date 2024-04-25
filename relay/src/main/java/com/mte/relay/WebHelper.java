@@ -28,6 +28,7 @@
     import android.util.Log;
 
     import com.android.volley.AuthFailureError;
+    import com.android.volley.BuildConfig;
     import com.android.volley.Header;
     import com.android.volley.NetworkResponse;
     import com.android.volley.Request;
@@ -44,6 +45,7 @@
 
     import java.io.IOException;
     import java.io.UnsupportedEncodingException;
+    import java.nio.charset.StandardCharsets;
     import java.util.HashMap;
     import java.util.Map;
 
@@ -53,7 +55,7 @@
         private static Context ctx;
         private RequestQueue requestQueue;
 
-        public static WebHelper getInstance(Context ctx) throws IOException {
+        public static WebHelper getInstance(Context ctx) {
             if (instance == null) {
                 instance = new WebHelper(ctx);
             }
@@ -185,7 +187,7 @@
         private Map<String, String> processRequestHeaders(RelayConnectionModel connectionModel,
                                                           Request origRequest,
                                                           String contentType) throws AuthFailureError {
-            Map<String, String> params = new HashMap<String, String>();
+            Map<String, String> params = new HashMap<>();
             params.put("content-type", contentType);
             params.put("x-mte-relay", RelayOptions.formatMteRelayHeader(connectionModel.relayOptions));
             params.put("x-mte-relay-eh", connectionModel.relayHeaders.encryptedDecryptedHeaders);
@@ -229,12 +231,7 @@
 
         private static String processErrorResponseBody(VolleyError error) {
             String body = "";
-            try {
-                body = new String(error.networkResponse.data, "UTF-8");
-            } catch (UnsupportedEncodingException e) {
-
-                Log.d("MTE", "Unable to convert error response body to String");
-            }
+            body = new String(error.networkResponse.data, StandardCharsets.UTF_8);
             return body;
         }
 

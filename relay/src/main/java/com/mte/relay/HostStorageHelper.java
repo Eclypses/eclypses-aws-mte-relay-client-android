@@ -99,16 +99,23 @@
                 wait();
             }
             try {
-                String jsonStr = readHostFromFile();
-                if (jsonStr != null) {
-                    storedHosts.put(host, jsonStr);
-                    foundStoredHost = true;
-                    callback.foundStoredPairs(storedHosts.get(host));
-                } else {
+                String storedHostStr = readHostFromFile();
+                if (storedHostStr == null) {
                     callback.noStoredPairs();
+                } else {
+                    JSONObject storedPairs = new JSONObject(storedHostStr);
+                    String clientId = storedPairs.getString("clientId");
+                    String pairMapStates = storedPairs.getString("pairMapStates");
+                    if (pairMapStates.isEmpty() || pairMapStates == "") {
+                        callback.foundClientId(clientId);
+                    } else {
+                        storedHosts.put(host, storedHostStr);
+                        foundStoredHost = true;
+                        callback.foundStoredPairs(storedHosts.get(host));
+                    }
                 }
-            } catch (RelayException e) {
-                callback.noStoredPairs();
+            } catch (RelayException | JSONException e) {
+                callback.onError(e.getMessage());
             }
         }
 

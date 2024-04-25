@@ -26,6 +26,9 @@ package com.mte.relay;
 
 public interface HostStorageHelperCallback {
 
-    void foundStoredPairs(String storedHostsStr);
+    void onError(String message);
     void noStoredPairs();
+    void foundClientId(String clientId);
+    void foundStoredPairs(String storedHostsStr);
+
 }
