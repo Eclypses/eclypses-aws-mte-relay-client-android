@@ -199,11 +199,9 @@ public class Host {
             @Override
             public void onError(int code, String message, RelayHeaders relayHeaders) {
                 if (code == 566 && reInstantiateAttempts < pairPoolSize) {
-                    Log.d("MTE", "Server can't find the ClientId of " + hostClientId + " so we'll delete it and try again");
                     hostClientId = "";
                     rePairWithHost(listener);
                 } else {
-                    Log.d("MTE", "Relay Server Check returned Error Code: " + code + " Message: " + message);
                     listener.onError("Code: " + code + " Message: " + message);
                 }
             }
@@ -211,13 +209,11 @@ public class Host {
             @Override
             public void onJsonResponse(JSONObject response, RelayHeaders relayHeaders) {
                 hostClientId = relayHeaders.clientId;
-                Log.d("MTE", "ClientId returned from HEAD request " + hostClientId);
                 pairWithHost(hostUrl, listener);
             }
 
             @Override
             public void onJsonArrayResponse(JSONArray jsonArrayResponse, RelayHeaders relayHeaders) {
-                Log.d("MTE", "Unexpected Volley jsonArrayResponse. Response: " + jsonArrayResponse.toString());
                 listener.onError("Unexpected Volley jsonArrayResponse. Response: " + jsonArrayResponse.toString());
             }
 
@@ -543,19 +539,5 @@ public class Host {
         return Base64.getEncoder().encodeToString(bytes);
     }
 
-    public static String bytesToDecimal(byte[] bytes) {
-        StringBuilder decimal = new StringBuilder();
-        for (byte b : bytes)
-            decimal.append(Byte.toUnsignedInt(b)).append(", ");
-        return decimal.toString();
-    }
 
-    public static String convertBytesToIntArrayString(byte[] bytes) {
-        int[] intArray = new int[bytes.length];
-
-        // converting byteArray to intArray
-        for (int i = 0; i < bytes.length; intArray[i] = Byte.toUnsignedInt(bytes[i++]));
-
-        return Arrays.toString(intArray);
-    }
 }
