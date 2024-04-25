@@ -26,7 +26,6 @@ package com.mte.relay;
 
 class Settings {
 
-    static String clientId = "";
     static int uploadChunkSize = 65536;
     static int downloadChunkSize = 65536;
     static String licenseCompanyName = "Eclypses Inc";

@@ -39,31 +39,29 @@ import java.util.Objects;
 
 public class Relay {
 
-    private static String[] relayHosts;
     private static Relay instance;
     private final Map<String, Host> hosts;
 
-    public static Relay getInstance(Context context, String[] relayHosts) throws IOException {
+    public static Relay getInstance(Context context, String[] relayHosts, InstantiateRelayCallback callback) throws IOException {
         if (instance == null) {
-            instance = new Relay(context, relayHosts);
+            instance = new Relay(context, relayHosts, callback);
         }
         return instance;
     }
 
-    private Relay(Context context, String[] relayHosts) throws IOException {
-        this.relayHosts = relayHosts;
+    private Relay(Context context, String[] relayHosts, InstantiateRelayCallback callback) throws IOException {
         if (!MteBase.initLicense(Settings.licenseCompanyName, Settings.licenseKey)) {
             throw new RelayException(getClass().getSimpleName(), "MTE License Check Failed");
         }
         hosts = new HashMap<>();
         for (String host : relayHosts) {
-            Host h = new Host(context, host);
+            Host h = new Host(context, host, callback);
             hosts.put(host, h);
         }
     }
 
-    public <T> void addToMteRequestQueue(Request<T> req, String[] headersToEncrypt, RelayResponseListener listener) {
-        Host host = hosts.get(resolveHost());
+    public <T> void addToMteRequestQueue(String serverUrl, Request<T> req, String[] headersToEncrypt, RelayResponseListener listener) {
+        Host host = getHost(serverUrl, listener);
         Objects.requireNonNull(host).sendRequest(req, headersToEncrypt, new RelayResponseListener() {
             @Override
             public void onError(String message) {
@@ -82,35 +80,28 @@ public class Relay {
         });
     }
 
-    public void uploadFile(RelayFileRequestProperties reqProperties, String route, RelayResponseListener listener) {
-        Host host = hosts.get(resolveHost());
+    public void uploadFile(String serverUrl, RelayFileRequestProperties reqProperties, String route, RelayResponseListener listener) {
+        Host host = getHost(serverUrl, listener);
         host.uploadFile(reqProperties, route, listener);
     }
 
-    public void downloadFile(RelayFileRequestProperties reqProperties, RelayResponseListener listener) throws IOException {
-        Host host = hosts.get(resolveHost());
+    public void downloadFile(String serverUrl, RelayFileRequestProperties reqProperties, RelayResponseListener listener) throws IOException {
+        Host host = getHost(serverUrl, listener);
         host.downloadFile(reqProperties, listener);
     }
 
-    public String resolveHost() {
-        if (relayHosts.length == 1) {
-            return relayHosts[0];
-        } else {
-            // TODO: Logic here to determine which server to use if there are multiple hosts.
-            return "";
+    private Host getHost(String hostUrl, RelayResponseListener listener) {
+        Host host = hosts.get(hostUrl);
+        if (host == null) {
+            listener.onError("Server Url " + hostUrl + " not found in list of Relay Servers");
         }
+        return host;
     }
 
-    public void rePairWithHost(RelayResponseListener listener) {
-        Host host = hosts.get(resolveHost());
+    public void rePairWithHost(String serverUrl, RelayResponseListener listener) {
+        Host host = getHost(serverUrl, listener);
         Objects.requireNonNull(host).rePairWithHost(listener);
     }
 
-    public static String bytesToDecimal(byte[] bytes) {
-        StringBuilder decimal = new StringBuilder();
-        for (byte b : bytes)
-            decimal.append(Byte.toUnsignedInt(b)).append(", ");
-        return decimal.toString();
-    }
 }
 
