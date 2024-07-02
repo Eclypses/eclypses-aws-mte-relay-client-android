@@ -1,5 +1,6 @@
 plugins {
     id 'com.android.library'
+    id 'maven-publish'
 }
 
 android {
@@ -10,8 +11,7 @@ android {
         minSdk 26
         targetSdk 33
         versionCode 1
-        versionName "3.4.6"
-//        setProperty("archivesBaseName", "package-${archivesBaseName}-$versionName")
+        versionName "3.4.7"
         setProperty("archivesBaseName", "eclypses-aws-mte-relay-client-android-$versionName")
     }
 
@@ -35,4 +35,45 @@ android {
 dependencies {
     implementation 'org.apache.commons:commons-lang3:3.12.0'
     implementation 'com.android.volley:volley:1.2.1'
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            maven(MavenPublication) {
+                setGroupId 'com.eclypses'
+                setArtifactId 'eclypses-aws-mte-relay-client-android-release'
+                version '3.4.7'
+                artifact bundleReleaseAar
+                pom {
+                    packaging = "aar"
+                    name.set("MteRelay")
+                    description.set("MteRelay: Library for Eclypses MteRelay")
+                    url.set("https://github.com/Eclypses/eclypses-aws-mte-relay-client-android.git")
+                    inceptionYear.set("2024")
+
+                    licenses {
+                        license {
+                            name.set("MIT License")
+                            url.set("https://opensource.org/licenses/MIT")
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            id.set("GregWaggoner")
+                            name.set("Greg Waggoner")
+                            email.set("greg.waggoner@eclypses.com")
+                        }
+                    }
+
+                    scm {
+                        connection.set("scm:git@github.com:Eclypses/eclypses-aws-mte-relay-client-android")
+                        developerConnection.set("scm:git@github.com:Eclypses/eclypses-aws-mte-relay-client-android.git")
+                        url.set("https://github.com/Eclypses/eclypses-aws-mte-relay-client-android.git")
+                    }
+                }
+            }
+        }
+    }
 }
