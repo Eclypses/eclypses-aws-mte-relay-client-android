@@ -3,15 +3,13 @@
 </center>
 
 <div align="center" style="font-size:40pt; font-weight:900; font-family:arial; margin-top:50px;" >
-The Android Java MTE Relay Library</div>
+Android Java MteRelay Library for Amazon Web Services</div>
 <br><br><br>
 
 # Introduction 
 This AAR library provides the Java language Eclypses MteRelay Client library.
 
-<!-- The current version of this library is 4.1.0 (identical to the MTE version being used). -->
-
-- This guide assumes a working knowledge of including an AAR library (either from a local directory on your computer or directly from Maven Central) in your Android project.
+- This guide assumes a working knowledge of including an AAR library (either from a local directory on your computer or directly from Maven Central) in your Android project. [HowTo](https://developer.android.com/build/dependencies#groovy)
 -	The simplest way to use the library is to list it as a dependency for your app (Module build.gradle / Dependencies). Add 'implementation 'com.eclypses:eclypses-aws-mte-relay-client-android-release:x.x.x' and confirm that MavenCentral is one of your listed repositories.
 - Alternatively, you can add a 'libs' directory to the same level as the src directory n your app, then download the Relay Library from https://github.com/Eclypses/eclypses-aws-mte-relay-client-android.git and compile it. Add the resulting .aar (eclypses-aws-mte-relay-client-android-x.x.x-release.aar) to the libs dir you just created and add - implementation files('libs/eclypses-aws-mte-relay-client-android-4.1.0-debug.aar') - line to your module build.gradle file's dependancies block.
 
@@ -120,7 +118,7 @@ relay.uploadFile(AppSettings.relayHosts[0], reqProperties, route, new RelayRespo
 ``` java
 @Override // Callback from Relay Module
     public void getRequestBodyStream(PipedOutputStream outputStream) {
-        // convert your entire HttpRequest, including the file bytes to a byte[] and write it to the output stream. In our demonstration app, we convert the request object to a byte[] and write it to the OutputStream, then read the file by chunks and write each chunk into the OutputStream. This allows the even a large file (up to nearly 2 gigabytes) to be streamed up to the server, provided that your server can accept a file stream. 
+        // convert your entire HttpRequest, including the file bytes to a byte[] and write it to the output stream. In our demonstration app, we convert the request object to a byte[] and write it to the OutputStream, then read the file by chunks and write each chunk into the OutputStream. This allows that even a large file (up to nearly 2 gigabytes) to be streamed up to the server, provided that your server can accept a file stream. 
         
         outputStream.write(HttpRequestBytes, 0, HttpRequestBytes.length);
         outputStream.flush();
@@ -203,7 +201,10 @@ relay.rePairWithRelayServer(Relay Server Url, new RelayResponseListener() {
    }
 });
 ```
+
+### An AWS MteRelay Client YouTube integration video will soon be available.
 <br><br>
+
 <div style="page-break-after: always; break-after: page;"></div>
 
 
