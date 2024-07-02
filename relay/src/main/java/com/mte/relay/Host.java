@@ -41,7 +41,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -60,7 +59,7 @@ public class Host {
     private final int reInstantiateAttempts = 1;
     private String hostClientId;
 
-    public Host(Context ctx, String hostUrl, InstantiateRelayCallback callback) throws IOException {
+    public Host(Context ctx, String hostUrl, InstantiateRelayCallback callback) {
         this.ctx = ctx;
         this.hostUrl = hostUrl;
         this.hostUrlB64 = Base64.getUrlEncoder().encodeToString(hostUrl.getBytes());
@@ -127,6 +126,7 @@ public class Host {
                         if (BuildConfig.DEBUG) {
                             Log.i("MTE", "Completed HEAD Request");
                         }
+                        callback.relayInstantiated();
                     }
                 });
 //                }
@@ -174,8 +174,9 @@ public class Host {
 
     RelayOptions setRelayOptions(String requestMethod, String pairId) {
         boolean bodyIsEncoded = requestMethod == "POST" ? true : false;
+        String clientId = hostClientId == null ? "" : hostClientId;
         return new RelayOptions(
-                hostClientId,
+                clientId,
                 pairId,
                 "MKE",
                 true,
@@ -209,7 +210,7 @@ public class Host {
             @Override
             public void onJsonResponse(JSONObject response, RelayHeaders relayHeaders) {
                 hostClientId = relayHeaders.clientId;
-                pairWithHost(hostUrl, listener);
+                makePairingCall(hostUrl, listener);
             }
 
             @Override
@@ -224,7 +225,7 @@ public class Host {
         });
     }
 
-    synchronized private void pairWithHost(String hostUrl, RelayResponseListener listener) {
+    synchronized private void makePairingCall(String hostUrl, RelayResponseListener listener) {
         Map<String, Pair> pairMap = mteHelper.createPairMap(pairPoolSize);
         JSONArray pairMapArray = new JSONArray();
         pairMap.forEach((pairId, pair) -> {
@@ -526,7 +527,7 @@ public class Host {
             }
             Thread pairingTread = new Thread(() -> checkForRelayServer(listener));
             pairingTread.start();
-        } catch (IOException| JSONException e) {
+        } catch (JSONException e) {
             listener.onError(e.getMessage());
         }
     }

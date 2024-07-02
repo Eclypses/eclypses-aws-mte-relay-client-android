@@ -81,6 +81,10 @@
         }
 
         public void sendJson(RelayConnectionModel connectionModel, Request origRequest, RWHResponseListener listener) {
+            Log.d("MTE", "Calling " + connectionModel.url + connectionModel.route);
+            Log.d("MTE", "Calling method: " + connectionModel.method);
+            Log.d("MTE", "Calling with ClientId: " + connectionModel.relayOptions.clientId );
+
             RelayHeaders responseHeaders = new RelayHeaders();
             JsonObjectRequest request = new JsonObjectRequest(
                     connectionModel.method.equals("HEAD") ? Request.Method.HEAD : Request.Method.POST,
@@ -89,10 +93,21 @@
                     response -> listener.onJsonResponse(response,
                             createNewRelayResponseHeaders(responseHeaders)
                     ), error -> {
-                listener.onError(error.networkResponse.statusCode,
-                        processErrorResponseBody(error),
-                        createNewRelayResponseHeaders(responseHeaders));
-                    }) {
+                if (error != null) {
+                    Log.d("MTE", "Error is " + error.getMessage());
+                }
+                if (error.networkResponse != null) {
+                    Log.d("MTE", "Error is " + error.networkResponse);
+                    Log.d("MTE", "Status Code is " + error.networkResponse.statusCode);
+                    listener.onError(error.networkResponse.statusCode,
+                            processErrorResponseBody(error),
+                            createNewRelayResponseHeaders(responseHeaders));
+                } else {
+                    listener.onError(503,
+                            error.getMessage(),
+                            new RelayHeaders());
+                }
+            }) {
                 @Override
                 public Map<String, String> getHeaders() throws AuthFailureError {
                     String contentType = "application/json; charset=utf-8";
