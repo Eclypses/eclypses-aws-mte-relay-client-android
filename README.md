@@ -11,7 +11,7 @@ This AAR library provides the Java language Eclypses MteRelay Client library.
 
 - This guide assumes a working knowledge of including an AAR library (either from a local directory on your computer or directly from Maven Central) in your Android project. [HowTo](https://developer.android.com/build/dependencies#groovy)
 -	The simplest way to use the library is to list it as a dependency for your app (Module build.gradle / Dependencies). Add 'implementation 'com.eclypses:eclypses-aws-mte-relay-client-android-release:x.x.x' and confirm that MavenCentral is one of your listed repositories.
-- Alternatively, you can add a 'libs' directory to the same level as the src directory n your app, then download the Relay Library from https://github.com/Eclypses/eclypses-aws-mte-relay-client-android.git and compile it. Add the resulting .aar (eclypses-aws-mte-relay-client-android-x.x.x-release.aar) to the libs dir you just created and add - implementation files('libs/eclypses-aws-mte-relay-client-android-4.1.0-debug.aar') - line to your module build.gradle file's dependancies block.
+- Alternatively, you can add a 'libs' directory to the same level as the src directory n your app, then download the Relay Library from https://github.com/Eclypses/eclypses-aws-mte-relay-client-android.git and compile it. Add the resulting .aar (eclypses-aws-mte-relay-client-android-release-3.4.9-release.aar) to the libs dir you just created and add - implementation files('libs/eclypses-aws-mte-relay-client-android-release-3.4.9-release.aar') - line to your module build.gradle file's dependancies block.
 
 
 <br><br>
@@ -22,7 +22,7 @@ This AAR library provides the Java language Eclypses MteRelay Client library.
    - Create a class variable for the relay singleton. 
    <br><br>
    ``` java
-   Relay relay;
+   private static Relay relay;
 
    ```
    - Then, in the constructor for that class, instantiate the Relay class, passing ...

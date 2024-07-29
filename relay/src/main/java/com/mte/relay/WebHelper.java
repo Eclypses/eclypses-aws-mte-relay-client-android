@@ -81,6 +81,10 @@
         }
 
         public void sendJson(RelayConnectionModel connectionModel, Request origRequest, RWHResponseListener listener) {
+            Log.d("MTE", "Calling " + connectionModel.url + connectionModel.route);
+            Log.d("MTE", "Calling method: " + connectionModel.method);
+            Log.d("MTE", "Calling with ClientId: " + connectionModel.relayOptions.clientId );
+
             RelayHeaders responseHeaders = new RelayHeaders();
             JsonObjectRequest request = new JsonObjectRequest(
                     connectionModel.method.equals("HEAD") ? Request.Method.HEAD : Request.Method.POST,
@@ -89,10 +93,21 @@
                     response -> listener.onJsonResponse(response,
                             createNewRelayResponseHeaders(responseHeaders)
                     ), error -> {
-                listener.onError(error.networkResponse.statusCode,
-                        processErrorResponseBody(error),
-                        createNewRelayResponseHeaders(responseHeaders));
-                    }) {
+                if (error != null) {
+                    Log.d("MTE", "Error is " + error.getMessage());
+                }
+                if (error.networkResponse != null) {
+                    Log.d("MTE", "Error is " + error.networkResponse);
+                    Log.d("MTE", "Status Code is " + error.networkResponse.statusCode);
+                    listener.onError(error.networkResponse.statusCode,
+                            error.networkResponse.data,
+                            createNewRelayResponseHeaders(responseHeaders));
+                } else {
+                    listener.onError(503,
+                            error.networkResponse.data,
+                            new RelayHeaders());
+                }
+            }) {
                 @Override
                 public Map<String, String> getHeaders() throws AuthFailureError {
                     String contentType = "application/json; charset=utf-8";
@@ -122,7 +137,7 @@
                             createNewRelayResponseHeaders(responseHeaders)
                     ), error -> {
                 listener.onError(error.networkResponse.statusCode,
-                        processErrorResponseBody(error),
+                        error.networkResponse.data,
                         createNewRelayResponseHeaders(responseHeaders));
                     }) {
 
@@ -151,8 +166,9 @@
                     Request.Method.POST,
                     connectionModel.url + connectionModel.route,
                     error -> {
+                        parseResponseHeaders(error.networkResponse, responseHeaders);
                         listener.onError(error.networkResponse.statusCode,
-                                processErrorResponseBody(error),
+                                error.networkResponse.data,
                                 createNewRelayResponseHeaders(responseHeaders));
                     }) {
                 @Override
@@ -227,12 +243,6 @@
                     responseHeaders.encoderType,
                     responseHeaders.encryptedDecryptedHeaders,
                     responseHeaders.responseHeaderList);
-        }
-
-        private static String processErrorResponseBody(VolleyError error) {
-            String body = "";
-            body = new String(error.networkResponse.data, StandardCharsets.UTF_8);
-            return body;
         }
 
     }

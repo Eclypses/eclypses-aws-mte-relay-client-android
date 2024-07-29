@@ -1,22 +1,21 @@
+
 plugins {
     id 'com.android.library'
+    id 'maven-publish'
+    id 'signing'
+    id 'com.gradleup.nmcp' version '0.0.8'
 }
 
 android {
     namespace 'com.eclypses.relay'
-    compileSdk 33
+    compileSdk 34
 
     defaultConfig {
         minSdk 26
-        targetSdk 33
+        targetSdk 34
         versionCode 1
-        versionName "3.4.6"
-//        setProperty("archivesBaseName", "package-${archivesBaseName}-$versionName")
-        setProperty("archivesBaseName", "eclypses-aws-mte-relay-client-android-$versionName")
-    }
-
-    buildFeatures {
-        buildConfig = true
+        versionName "3.4.9"
+        setProperty("archivesBaseName", "eclypses-aws-mte-relay-client-android-release-$versionName")
     }
 
     buildTypes {
@@ -26,13 +25,69 @@ android {
         }
     }
 
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
-    }
 }
 
 dependencies {
-    implementation 'org.apache.commons:commons-lang3:3.12.0'
+    implementation 'org.apache.commons:commons-lang3:3.14.0'
     implementation 'com.android.volley:volley:1.2.1'
 }
+
+publishing {
+    publications {
+        release(MavenPublication) {
+
+            groupId = 'com.eclypses'
+            artifactId = 'eclypses-aws-mte-relay-client-android-release'
+            version = '3.4.9'
+
+            afterEvaluate {
+                artifact("$buildDir/outputs/aar/${artifactId}-${version}-release.aar")
+            }
+
+            pom {
+                name = 'Eclypses AWS MteRelay Android Client Library'
+                description = 'MteRelay: Android Library for Eclypses MteRelay'
+                url = 'https://github.com/Eclypses/eclypses-aws-mte-relay-client-android.git'
+                inceptionYear = '2024'
+
+                licenses {
+                    license {
+                        name = 'MIT License'
+                        url = 'https://opensource.org/licenses/MIT'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'GregWaggoner'
+                        name = 'Greg Waggoner'
+                        email = 'greg.waggoner@eclypses.com'
+                    }
+                }
+                scm {
+                    connection = 'scm:git@github.com:Eclypses/eclypses-aws-mte-relay-client-android'
+                    developerConnection = 'scm:git@github.com:Eclypses/eclypses-aws-mte-relay-client-android.git'
+                    url = 'https://github.com/Eclypses/eclypses-aws-mte-relay-client-android.git'
+                }
+            }
+            repositories {
+                maven {
+                    name = 'MavenCentral'
+                    url = 'https://central.sonatype.com/api/v1/publisher'
+
+                    credentials {
+                        username = project.findProperty("ossrhUsername") ?: ""
+                        password = project.findProperty("ossrhPassword") ?: ""
+                    }
+                }
+
+            }
+
+        }
+    }
+}
+
+signing {
+    useGpgCmd()
+    sign publishing.publications.release
+}
+
