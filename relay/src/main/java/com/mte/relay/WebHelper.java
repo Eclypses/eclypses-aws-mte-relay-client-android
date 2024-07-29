@@ -100,11 +100,11 @@
                     Log.d("MTE", "Error is " + error.networkResponse);
                     Log.d("MTE", "Status Code is " + error.networkResponse.statusCode);
                     listener.onError(error.networkResponse.statusCode,
-                            processErrorResponseBody(error),
+                            error.networkResponse.data,
                             createNewRelayResponseHeaders(responseHeaders));
                 } else {
                     listener.onError(503,
-                            error.getMessage(),
+                            error.networkResponse.data,
                             new RelayHeaders());
                 }
             }) {
@@ -137,7 +137,7 @@
                             createNewRelayResponseHeaders(responseHeaders)
                     ), error -> {
                 listener.onError(error.networkResponse.statusCode,
-                        processErrorResponseBody(error),
+                        error.networkResponse.data,
                         createNewRelayResponseHeaders(responseHeaders));
                     }) {
 
@@ -166,8 +166,9 @@
                     Request.Method.POST,
                     connectionModel.url + connectionModel.route,
                     error -> {
+                        parseResponseHeaders(error.networkResponse, responseHeaders);
                         listener.onError(error.networkResponse.statusCode,
-                                processErrorResponseBody(error),
+                                error.networkResponse.data,
                                 createNewRelayResponseHeaders(responseHeaders));
                     }) {
                 @Override
@@ -242,12 +243,6 @@
                     responseHeaders.encoderType,
                     responseHeaders.encryptedDecryptedHeaders,
                     responseHeaders.responseHeaderList);
-        }
-
-        private static String processErrorResponseBody(VolleyError error) {
-            String body = "";
-            body = new String(error.networkResponse.data, StandardCharsets.UTF_8);
-            return body;
         }
 
     }

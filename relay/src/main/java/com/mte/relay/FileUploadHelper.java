@@ -106,7 +106,7 @@ public class FileUploadHelper {
         // Start thread to encrypt File Bytes in chunks
         Thread encryptThread = new Thread(() -> {
             try {
-                byte[] buffer = new byte[Settings.uploadChunkSize];
+                byte[] buffer = new byte[RelaySettings.uploadChunkSize];
                 int bytesRead;
 
                 while ((bytesRead = pipedInputStream.read(buffer)) != -1) {
