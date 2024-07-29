@@ -30,6 +30,7 @@ import android.util.Log;
 import com.android.volley.AuthFailureError;
 import com.android.volley.BuildConfig;
 import com.android.volley.Request;
+import com.android.volley.VolleyError;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -197,13 +198,14 @@ public class Host {
                 setRelayOptions(RequestMethod.HEAD, null)
         );
         webHelper.sendJson(connectionModel, null, new RWHResponseListener() {
+
             @Override
-            public void onError(int code, String message, RelayHeaders relayHeaders) {
+            public void onError(int code, byte[] data, RelayHeaders relayHeaders) {
                 if (code == 566 && reInstantiateAttempts < pairPoolSize) {
                     hostClientId = "";
                     rePairWithHost(listener);
                 } else {
-                    listener.onError("Code: " + code + " Message: " + message);
+                    listener.onError("Code: " + code + " Message: Unable to locate Relay Server at " + hostUrl);
                 }
             }
 
@@ -220,7 +222,7 @@ public class Host {
 
             @Override
             public void onByteArrayResponse(byte[] byteArrayResponse, RelayHeaders relayHeaders) {
-                listener.onError("Unexpected Volley jsonArrayResponse. Response: " + byteArrayResponse.toString());
+                listener.onError("Unexpected Volley byteArrayResponse. Response: " + byteArrayResponse.toString());
             }
         });
     }
@@ -258,8 +260,8 @@ public class Host {
         );
         webHelper.sendJsonArray(connectionModel, null, new RWHResponseListener() {
             @Override
-            public void onError(int code, String message, RelayHeaders relayHeaders) {
-                listener.onError("Code: " + code + " Message: " + message);
+            public void onError(int code, byte[] data, RelayHeaders relayHeaders) {
+                listener.onError("Code: " + code + " Message: Unable to pair with relay Server " + hostUrl);
             }
 
             @Override
@@ -312,7 +314,9 @@ public class Host {
 
     synchronized private void notifyPaired() throws JSONException {
         hostPaired = true;
-        storeStates();
+        if (RelaySettings.persistPairs) {
+            storeStates();
+        }
         notify();
     }
 
@@ -351,12 +355,30 @@ public class Host {
                 setRelayOptions(RequestMethod.POST, encryptedRouteResult.pairId));
         webHelper.sendBytes(relayConnectionModel, origRequest, new RWHResponseListener() {
             @Override
-            public void onError(int code, String message, RelayHeaders relayHeaders) {
+            public void onError(int code, byte[] data, RelayHeaders relayHeaders) {
                 rePairCheck(code, origRequest, headersToEncrypt, listener);
-                if (BuildConfig.DEBUG) {
-                    Log.e("MTE", message);
+                Map<String, List<String>> responseHeaders = null;
+                try {
+                    responseHeaders = NetworkHeaderHelper.processVolleyResponseHeaders(relayHeaders, mteHelper);
+                } catch (IOException e) {
+                    listener.onError(e.getMessage());
                 }
-                listener.onError(message);
+                DecodeResult bodyDecodeResult = null;
+                String responseString = "";
+                if (data != null) {
+                    bodyDecodeResult = mteHelper.decode(relayHeaders.pairId, data);
+                    if (bodyDecodeResult.decodedBytes != null) {
+                        responseString = new String(bodyDecodeResult.decodedBytes, StandardCharsets.UTF_8);
+                    }
+                    if (RelaySettings.persistPairs) {
+                        try {
+                            storeStates();
+                        } catch (JSONException e) {
+                            listener.onError(e.getMessage());
+                        }
+                    }
+                }
+                listener.onError(responseString);
             }
 
             @Override
@@ -379,10 +401,12 @@ public class Host {
                 }
                 if (byteArrayResponse != null) {
                     DecodeResult bodyDecodeResult = mteHelper.decode(relayHeaders.pairId, byteArrayResponse);
-                    try {
-                        storeStates();
-                    } catch (JSONException e) {
-                        listener.onError(e.getMessage());
+                    if (RelaySettings.persistPairs) {
+                        try {
+                            storeStates();
+                        } catch (JSONException e) {
+                            listener.onError(e.getMessage());
+                        }
                     }
                     rePairAttempts = 1;
                     listener.onResponse(bodyDecodeResult.decodedBytes, responseHeaders);
@@ -457,10 +481,12 @@ public class Host {
                         reqProperties.relayStreamCallback);
                 FileUploadHelper fileUploadHelper = new FileUploadHelper(properties, listener);
                 fileUploadHelper.encryptAndSend(() -> {
-                    try {
-                        storeStates();
-                    } catch (JSONException e) {
-                        listener.onError("Error: " + e.getMessage());
+                    if (RelaySettings.persistPairs){
+                        try {
+                            storeStates();
+                        } catch (JSONException e) {
+                            listener.onError("Error: " + e.getMessage());
+                        }
                     }
                 });
             } catch (IOException  | MteException e) {
@@ -490,10 +516,12 @@ public class Host {
                 setRelayOptions(RequestMethod.GET, pairId));
         FileDownloadHelper connectionHelper = new FileDownloadHelper(properties, listener);
         connectionHelper.downloadFile(() -> {
-            try {
-                storeStates();
-            } catch (JSONException e) {
-                listener.onError("Error: " + e.getMessage());
+            if (RelaySettings.persistPairs) {
+                try {
+                    storeStates();
+                } catch (JSONException e) {
+                    listener.onError("Error: " + e.getMessage());
+                }
             }
         });
     }

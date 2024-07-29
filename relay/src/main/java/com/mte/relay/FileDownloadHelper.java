@@ -101,7 +101,7 @@ public class FileDownloadHelper {
     private void processFileDownloadStream(String downloadPath) throws IOException {
         InputStream inputStream = httpConn.getInputStream();
         FileOutputStream outputStream = new FileOutputStream(downloadPath);
-        byte[] buffer = new byte[Settings.downloadChunkSize];
+        byte[] buffer = new byte[RelaySettings.downloadChunkSize];
         int bytesRead;
         mteHelper.startDecrypt(responsePairId);
         while ((bytesRead = inputStream.read(buffer)) != -1) {

@@ -50,7 +50,7 @@ public class Relay {
     }
 
     private Relay(Context context, String[] relayHosts, InstantiateRelayCallback callback) throws IOException {
-        if (!MteBase.initLicense(Settings.licenseCompanyName, Settings.licenseKey)) {
+        if (!MteBase.initLicense(RelaySettings.licenseCompanyName, RelaySettings.licenseKey)) {
             throw new RelayException(getClass().getSimpleName(), "MTE License Check Failed");
         }
         hosts = new HashMap<>();
@@ -101,6 +101,10 @@ public class Relay {
     public void rePairWithRelayServer(String serverUrl, RelayResponseListener listener) {
         Host host = getHost(serverUrl, listener);
         Objects.requireNonNull(host).rePairWithHost(listener);
+    }
+
+    public void setPersistPairs(boolean bool) {
+        RelaySettings.persistPairs = bool;
     }
 
 }
