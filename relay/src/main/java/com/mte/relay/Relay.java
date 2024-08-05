@@ -25,6 +25,7 @@
 package com.mte.relay;
 
 import android.content.Context;
+import android.util.Log;
 
 import com.android.volley.Request;
 import com.eclypses.mte.MteBase;
@@ -40,7 +41,9 @@ import java.util.Objects;
 public class Relay {
 
     private static Relay instance;
-    private final Map<String, Host> hosts;
+    private final Map<String, Host> pairedHosts;
+    private final String[] relayHosts;
+    private final Context ctx;
 
     public static Relay getInstance(Context context, String[] relayHosts, InstantiateRelayCallback callback) throws IOException {
         if (instance == null) {
@@ -53,15 +56,33 @@ public class Relay {
         if (!MteBase.initLicense(RelaySettings.licenseCompanyName, RelaySettings.licenseKey)) {
             throw new RelayException(getClass().getSimpleName(), "MTE License Check Failed");
         }
-        hosts = new HashMap<>();
-        for (String host : relayHosts) {
-            Host h = new Host(context, host, callback);
-            hosts.put(host, h);
+        ctx = context;
+        pairedHosts = new HashMap<>();
+        this.relayHosts = relayHosts;
+        for (String hostName : relayHosts) {
+            new Host(ctx, hostName, new InstantiateHostCallback() {
+
+                @Override
+                public void onError(String message) {
+                    Log.d("MTE", "Host " + hostName + "NOT instantiated. Error: " + message);
+                  callback.onError(message);
+                }
+
+                @Override
+                public void hostInstantiated(String hostUrl, Host host) {
+                    pairedHosts.put(hostUrl, host);
+                    callback.relayInstantiated();
+                }
+            });
         }
     }
 
     public <T> void addToMteRequestQueue(String serverUrl, Request<T> req, String[] headersToEncrypt, RelayResponseListener listener) {
         Host host = getHost(serverUrl, listener);
+        if (host == null) {
+            listener.onError("Server Url " + serverUrl + " not found in list of Paired Relay Servers");
+            return;
+        }
         Objects.requireNonNull(host).sendRequest(req, headersToEncrypt, new RelayResponseListener() {
             @Override
             public void onError(String message) {
@@ -91,20 +112,42 @@ public class Relay {
     }
 
     private Host getHost(String hostUrl, RelayResponseListener listener) {
-        Host host = hosts.get(hostUrl);
+        Host host = pairedHosts.get(hostUrl);
         if (host == null) {
-            listener.onError("Server Url " + hostUrl + " not found in list of Relay Servers");
+            listener.onError("Server Url " + hostUrl + " not found in list of Paired Relay Servers");
         }
         return host;
     }
 
     public void rePairWithRelayServer(String serverUrl, RelayResponseListener listener) {
         Host host = getHost(serverUrl, listener);
-        Objects.requireNonNull(host).rePairWithHost(listener);
+        if (host == null) {
+            listener.onError("Server Url " + serverUrl + " not found in list of Paired Relay Servers so we'll try to Re-Pair");
+            new Host(ctx, serverUrl, new InstantiateHostCallback() {
+
+                @Override
+                public void onError(String message) {
+
+                    listener.onError(message);
+                }
+
+                @Override
+                public void hostInstantiated(String hostUrl, Host host) {
+                    pairedHosts.put(hostUrl, host);
+                }
+            });
+        } else {
+            Objects.requireNonNull(host).rePairWithHost(listener);
+        }
+
     }
 
     public void setPersistPairs(boolean bool) {
         RelaySettings.persistPairs = bool;
+    }
+
+    public String[] getHostList() {
+        return pairedHosts.keySet().toArray(new String[0]);
     }
 
 }

@@ -136,6 +136,9 @@ public class NetworkHeaderHelper {
                                                             Map<String, List<String>> updatedResponseHeaders) {
         for (String headerName : headerNameList) {
             List<String> list = updatedResponseHeaders.get(headerName);
+            if (list == null) {
+                return;
+            }
             String[] splitString = list.get(0).split(", ");
             ArrayList<String> accessControlHeadersList = new ArrayList<>(Arrays.asList(splitString));
 
