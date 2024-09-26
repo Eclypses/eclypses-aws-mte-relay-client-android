@@ -78,14 +78,18 @@ public class Host {
 
                         @Override
                         public void noStoredPairs() {
-                            Log.d("MTE", "We found no Stored Pairs so we'll call " + hostUrl);
+                            if (BuildConfig.DEBUG) {
+                                Log.d("MTE", "We found no Stored Pairs so we'll pair with " + hostUrl);
+                            }
                             pairWithHost(callback);
                         }
 
                         @Override
                         public void foundClientId(String clientId) {
                             hostClientId = clientId;
-                            Log.d("MTE", "We found only a Client Id (no Stored Pairs) so we'll call " + hostUrl);
+                            if (BuildConfig.DEBUG) {
+                                Log.d("MTE", "We found only a Client Id (no Stored Pairs) so we'll call " + hostUrl);
+                            }
                             pairWithHost(callback);
                         }
 
@@ -116,7 +120,9 @@ public class Host {
                 checkForRelayServer(new RelayResponseListener() {
                     @Override
                     public void onError(String message) {
-                        Log.d("MTE", "Error on HEAD request. Error: " + message);
+                        if (BuildConfig.DEBUG) {
+                            Log.d("MTE", "Error on HEAD request. Error: " + message);
+                        }
                         callback.onError(message);
                     }
 
@@ -275,6 +281,7 @@ public class Host {
             @Override
             public void onJsonArrayResponse(JSONArray response, RelayHeaders relayHeaders) {
                 hostClientId = relayHeaders.clientId;
+                JSONObject responseJson = new JSONObject();
                 for (int i = 0; i < response.length(); i++) {
                     JSONObject pair;
                     String pairId = null;
@@ -293,19 +300,18 @@ public class Host {
                         listener.onError(e.getMessage());
                     }
                     pairMap.get(pairId).createEncoderAndDecoder();
-                    JSONObject responseJson = new JSONObject();
-                    try {
-                        responseJson.put("Successfully Paired with Relay Server","Response Code: 200");
-                    } catch (JSONException e) {
-                        listener.onError(e.getMessage());
-                    }
-                    listener.onResponse(responseJson, null);
+                }
+                try {
+                    responseJson.put("Successfully Paired with Relay Server","Response Code: 200");
+                } catch (JSONException e) {
+                    listener.onError(e.getMessage());
                 }
                 try {
                     notifyPaired();
                 } catch (JSONException e) {
                     listener.onError("Error: " + e.getMessage());
                 }
+                listener.onResponse(responseJson, null);
             }
 
             @Override
@@ -474,7 +480,7 @@ public class Host {
             try {
                 String pairId = mteHelper.getNextPairId();
                 RelayFileUploadProperties properties = new RelayFileUploadProperties(
-                        hostUrl,
+                        reqProperties.serverPath,
                         route,
                         reqProperties.file,
                         mteHelper,
@@ -510,7 +516,7 @@ public class Host {
         // Get PairId to do this download
         String pairId = mteHelper.getNextPairId();
         FileDownloadProperties properties = new FileDownloadProperties(
-                hostUrl,
+                reqProperties.serverPath,
                 reqProperties.route,
                 reqProperties.downloadPath,
                 mteHelper,
@@ -570,6 +576,5 @@ public class Host {
     String bytesToB64Str(byte[] bytes) {
         return Base64.getEncoder().encodeToString(bytes);
     }
-
 
 }
