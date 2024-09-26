@@ -228,7 +228,6 @@ public class WebHelper {
 
     private static void parseResponseHeaders(NetworkResponse response,
                                              RelayHeaders responseHeaders) {
-        Log.d("MTE", "Parsing Response Headers");
         if (response == null || response.allHeaders == null) {
             return;
         }

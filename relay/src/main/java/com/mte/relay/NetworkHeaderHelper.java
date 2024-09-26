@@ -109,7 +109,7 @@ public class NetworkHeaderHelper {
     }
 
     private static void processResponseHeaders(MteHelper mteHelper, String responsePairId, Map<String, List<String>> updatedResponseHeaders, String ehHeader) {
-        if (ehHeader != null && ehHeader != "") {
+        if (ehHeader != null && !ehHeader.isEmpty()) {
             DecodeResult decodeResult = mteHelper.decode(responsePairId, ehHeader);
             try {
                 JSONObject decodedHeaders = new JSONObject(decodeResult.decodedStr);

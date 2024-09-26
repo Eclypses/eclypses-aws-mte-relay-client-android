@@ -27,12 +27,15 @@ package com.mte.relay;
 import android.content.Context;
 import android.util.Log;
 
+import com.android.volley.BuildConfig;
 import com.android.volley.Request;
 import com.eclypses.mte.MteBase;
 
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,105 +44,123 @@ import java.util.Objects;
 public class Relay {
 
     private static Relay instance;
-    private final Map<String, Host> pairedHosts;
-    private final String[] relayHosts;
+    private final Map<String, Host> pairedHosts = new HashMap<>();
     private final Context ctx;
 
-    public static Relay getInstance(Context context, String[] relayHosts, InstantiateRelayCallback callback) throws IOException {
+    public static Relay getInstance(Context context) {
         if (instance == null) {
-            instance = new Relay(context, relayHosts, callback);
+            instance = new Relay(context);
+        }
+        if (BuildConfig.DEBUG) {
+            Log.d("MTE", "Relay Instantiated.");
         }
         return instance;
     }
 
-    private Relay(Context context, String[] relayHosts, InstantiateRelayCallback callback) throws IOException {
+    private Relay(Context context) {
         if (!MteBase.initLicense(RelaySettings.licenseCompanyName, RelaySettings.licenseKey)) {
             throw new RelayException(getClass().getSimpleName(), "MTE License Check Failed");
         }
         ctx = context;
-        pairedHosts = new HashMap<>();
-        this.relayHosts = relayHosts;
-        for (String hostName : relayHosts) {
-            new Host(ctx, hostName, new InstantiateHostCallback() {
-
-                @Override
-                public void onError(String message) {
-                    Log.d("MTE", "Host " + hostName + "NOT instantiated. Error: " + message);
-                  callback.onError(message);
-                }
-
-                @Override
-                public void hostInstantiated(String hostUrl, Host host) {
-                    pairedHosts.put(hostUrl, host);
-                    callback.relayInstantiated();
-                }
-            });
-        }
     }
 
-    public <T> void addToMteRequestQueue(String serverUrl, Request<T> req, String[] headersToEncrypt, RelayResponseListener listener) {
-        Host host = getHost(serverUrl, listener);
-        if (host == null) {
-            listener.onError("Server Url " + serverUrl + " not found in list of Paired Relay Servers");
-            return;
+    public <T> void addToMteRequestQueue(Request<T> req, String[] headersToEncrypt, RelayResponseListener listener) {
+        String relayServerPath = null;
+        try {
+            URL relayServerUrl = new URL(req.getUrl());
+            String protocol = relayServerUrl.getProtocol();
+            String authority = relayServerUrl.getAuthority();
+            relayServerPath = protocol + "://" + authority + "/";
+        } catch (MalformedURLException e) {
+            listener.onError(e.getMessage());
         }
-        Objects.requireNonNull(host).sendRequest(req, headersToEncrypt, new RelayResponseListener() {
+        getHost(relayServerPath, listener, new InstantiateHostCallback() {
             @Override
-            public void onError(String message) {
-                listener.onError(message);
-            }
+            public void onError(String message) { listener.onError(message); }
 
             @Override
-            public void onResponse(byte[] responseBytes, Map<String, List<String>> responseHeaders) {
-                listener.onResponse(responseBytes, responseHeaders);
-            }
+            public void hostInstantiated(String hostUrl, Host host) {
+                host.sendRequest(req, headersToEncrypt, new RelayResponseListener() {
+                    @Override
+                    public void onError(String message) {
+                        listener.onError(message);
+                    }
 
-            @Override
-            public void onResponse(JSONObject responseJson, Map<String, List<String>> responseHeaders) {
-                listener.onResponse(responseJson, responseHeaders);
+                    @Override
+                    public void onResponse(byte[] responseBytes, Map<String, List<String>> responseHeaders) {
+                        listener.onResponse(responseBytes, responseHeaders);
+                    }
+
+                    @Override
+                    public void onResponse(JSONObject responseJson, Map<String, List<String>> responseHeaders) {
+                        listener.onResponse(responseJson, responseHeaders);
+                    }
+                });
             }
         });
     }
 
-    public void uploadFile(String serverUrl, RelayFileRequestProperties reqProperties, String route, RelayResponseListener listener) {
-        Host host = getHost(serverUrl, listener);
-        host.uploadFile(reqProperties, route, listener);
+    public void uploadFile(RelayFileRequestProperties reqProperties, String route, RelayResponseListener listener) {
+
+        getHost(reqProperties.serverPath, listener, new InstantiateHostCallback() {
+            @Override
+            public void onError(String message) { listener.onError(message); }
+
+            @Override
+            public void hostInstantiated(String hostUrl, Host host) {
+                host.uploadFile(reqProperties, route, listener);
+            }
+        });
+
     }
 
-    public void downloadFile(String serverUrl, RelayFileRequestProperties reqProperties, RelayResponseListener listener) throws IOException {
-        Host host = getHost(serverUrl, listener);
-        host.downloadFile(reqProperties, listener);
+    public void downloadFile(RelayFileRequestProperties reqProperties, RelayResponseListener listener) {
+        getHost(reqProperties.serverPath, listener, new InstantiateHostCallback() {
+            @Override
+            public void onError(String message) { listener.onError(message); }
+
+            @Override
+            public void hostInstantiated(String hostUrl, Host host) {
+                try {
+                    host.downloadFile(reqProperties, listener);
+                } catch (IOException e) {
+                    listener.onError(e.getMessage());
+                }
+            }
+        });
     }
 
-    private Host getHost(String hostUrl, RelayResponseListener listener) {
-        Host host = pairedHosts.get(hostUrl);
-        if (host == null) {
-            listener.onError("Server Url " + hostUrl + " not found in list of Paired Relay Servers");
-        }
-        return host;
-    }
-
-    public void rePairWithRelayServer(String serverUrl, RelayResponseListener listener) {
-        Host host = getHost(serverUrl, listener);
-        if (host == null) {
-            listener.onError("Server Url " + serverUrl + " not found in list of Paired Relay Servers so we'll try to Re-Pair");
-            new Host(ctx, serverUrl, new InstantiateHostCallback() {
+    private void getHost(String hostUrl, RelayResponseListener listener, InstantiateHostCallback callback) {
+        final Host[] hostToReturn = { pairedHosts.get(hostUrl) };
+        if (hostToReturn[0] == null) {
+            new Host(ctx, hostUrl, new InstantiateHostCallback() {
 
                 @Override
                 public void onError(String message) {
-
                     listener.onError(message);
                 }
 
                 @Override
                 public void hostInstantiated(String hostUrl, Host host) {
                     pairedHosts.put(hostUrl, host);
+                    callback.hostInstantiated(hostUrl, host);
                 }
             });
         } else {
-            Objects.requireNonNull(host).rePairWithHost(listener);
+            callback.hostInstantiated(hostUrl, hostToReturn[0]);
         }
+    }
 
+    public void rePairWithRelayServer(String serverUrl, RelayResponseListener listener) {
+        getHost(serverUrl, listener, new InstantiateHostCallback() {
+            @Override
+            public void onError(String message) { listener.onError(message); }
+
+            @Override
+            public void hostInstantiated(String hostUrl, Host host) {
+                host.rePairWithHost(listener);
+            }
+        });
     }
 
     public void setPersistPairs(boolean bool) {

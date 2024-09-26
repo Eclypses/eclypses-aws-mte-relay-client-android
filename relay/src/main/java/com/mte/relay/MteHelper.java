@@ -120,7 +120,6 @@ public class MteHelper {
         checkPairId(getClass().getSimpleName(), pairId);
         Pair pair = pairMap.get(pairId);
         assert pair != null : "Unable to retrieve pairing";
-        Log.d("MTE", "Pair Id - " + pair.pairId);
         return pair.decode(encoded);
     }
 
