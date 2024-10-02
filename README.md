@@ -26,11 +26,10 @@ This AAR library provides the Java language Eclypses MteRelay Client library.
 
    ```
    - Then, in the constructor for that class, instantiate the Relay class, passing ...
-      -  the context, 
-      - a String[] of Relay Server URLs, (can be an array containing a single Url), 
+      -  the context,
       - and a new instance of InstantiateRelayCallback.
    ``` java
-   relay = Relay.getInstance(ctx, AppSettings.relayHosts, new InstantiateRelayCallback() {
+   relay = Relay.getInstance(ctx, new InstantiateRelayCallback() {
       @Override
       public void onError(String message) {
          // handle instantiate errors appropriately
@@ -38,7 +37,7 @@ This AAR library provides the Java language Eclypses MteRelay Client library.
 
       @Override
       public void relayInstantiated() {
-         // any code to run after Relay is instantiated and paired with Relay Server
+         // any code to run after Relay is instantiated
       }
    });
    ```
@@ -46,8 +45,8 @@ This AAR library provides the Java language Eclypses MteRelay Client library.
 
 # Simple Volley GET and POST requests
    
-- After creating your Volley request, instead of calling `RequestSingleton.getInstance(context).addToRequestQueue(request);`, call relay.addToMteRequestQueue(), passing ...
-   - the url of the server you wish to use from the array you used when instantiating the Relay class, 
+- When creating your Volley request, instead of adding your original server Url, add the url (Scheme and authority, i.e. https://myAwsRelayServer/) of the AWS Relay Server that you are targeting. 
+- Then, after creating your Volley request, instead of calling `RequestSingleton.getInstance(context).addToRequestQueue(request);`, call relay.addToMteRequestQueue(), passing ...
    - the request object, 
    - a String[] of the names of any http headers you wish to have protected by Mte, 
    - and a new RelayResponseListener.
@@ -55,10 +54,10 @@ This AAR library provides the Java language Eclypses MteRelay Client library.
 ``` java
 String[] headersToEncrypt = new String[] {"Content-Length"};
 
-relay.addToMteRequestQueue(AppSettings.relayHosts[1], request, headersToEncrypt, new RelayResponseListener() {
+relay.addToMteRequestQueue(request, headersToEncrypt, new RelayResponseListener() {
    @Override
-   public void onError(String message) {
-      // Handle errors appropriately
+   public void onError(String message, Map<String, List<String>> responseHeaders) {
+      // Handle errors appropriately and response headers as necessary
    }
 
    @Override
@@ -82,12 +81,12 @@ File origFile = new File(ctx.getFilesDir(), filename);
 String route = "route/portion/of/url";
 RelayFileRequestProperties reqProperties = new RelayFileRequestProperties(
                         // File object to upload,
+                        // Server path ("https://myRelayServer.com")
                         // request headers for this request as a Map<String, String>,
                         // String[] of header names to protect with Mte,
                         // Instance of RelayStreamCallback);
 ```
 - Then, call relay.uploadFile, passing ...
-   - Url of the Relay Server,
    - the RelayFileRequestProperties object you just created'
    - the route portion of the url you are uploading to,
    - a new instance of RelayResponseListener.
@@ -95,8 +94,8 @@ RelayFileRequestProperties reqProperties = new RelayFileRequestProperties(
 ``` java
 relay.uploadFile(AppSettings.relayHosts[0], reqProperties, route, new RelayResponseListener() {
    @Override
-   public void onError(String message) {
-      // Handle errors appropriately
+   public void onError(String message, Map<String, List<String>> responseHeaders) {
+      // Handle errors appropriately and response headers as necessary
    }
 
    @Override
@@ -145,13 +144,13 @@ relay.uploadFile(AppSettings.relayHosts[0], reqProperties, route, new RelayRespo
 ``` java
  RelayFileRequestProperties reqProperties = new RelayFileRequestProperties(
                         // Name of the file to download,
+                        // Server path ("https://myRelayServer.com")
                         // route portion of download Url with preceding '/' removed,
                         // path of location where you want to store the downloaded file,
                         // request headers for this request as a Map<String, String>,
                         // String[] of header names to protect with Mte
 ```
 - Then call relay.downloadFile, passing ...
-   - Url of the Relay Server,
    - the RelayFileRequestProperties object you just created'
    - a new instance of RelayResponseListener
  <br><br>
@@ -159,8 +158,8 @@ relay.uploadFile(AppSettings.relayHosts[0], reqProperties, route, new RelayRespo
 ``` java
 relay.downloadFile(AppSettings.relayHosts[0], reqProperties, new RelayResponseListener() {
    @Override
-   public void onError(String message) {
-      // Handle errors appropriately
+   public void onError(String message, Map<String, List<String>> responseHeaders) {
+      // Handle errors appropriately and response headers as necessary
    }
 
    @Override
@@ -179,15 +178,15 @@ relay.downloadFile(AppSettings.relayHosts[0], reqProperties, new RelayResponseLi
 # RePair with Server
 - Most situations where Client and Server get out of sync are handled automatically but a function is available to trigger a rePair attempt.
 - Call 'relay.rePairWithRelayServer' passing ...
-   - the Url of the server with which you wish to rePair,
+   - the path of the server with which you wish to rePair (https://myRelayServer.com),
    - and a new instance of RelayResponseListener
 <br><br>
 
 ``` java
-relay.rePairWithRelayServer(Relay Server Url, new RelayResponseListener() {
+relay.rePairWithRelayServer(relayServerPath, new RelayResponseListener() {
    @Override
-   public void onError(String message) {
-         // Handle errors appropriately
+   public void onError(String message, Map<String, List<String>> responseHeaders) {
+         // Handle errors appropriately and response headers as necessary
    }
 
    @Override

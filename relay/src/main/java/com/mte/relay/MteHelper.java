@@ -32,6 +32,8 @@ import com.eclypses.mte.MteBase;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -87,9 +89,10 @@ public class MteHelper {
         } else {
             pair = getNextPair();
         }
-        assert pair != null : "Unable to retrieve pairing";
-        result.pairId = pair.pairId;
-        result.encodedStr = pair.encode(plaintext);
+        if (pair != null) {
+            result.pairId = pair.pairId;
+            result.encodedStr = pair.encode(plaintext);
+        }
         return result;
     }
 
@@ -101,61 +104,73 @@ public class MteHelper {
         } else {
             pair = getNextPair();
         }
-        assert pair != null : "Unable to retrieve pairing";
-        result.pairId = pair.pairId;
-        result.encodedBytes = pair.encode(bytes);
+        if (pair != null) {
+            result.pairId = pair.pairId;
+            result.encodedBytes = pair.encode(bytes);
+        }
         return result;
     }
 
     public DecodeResult decode(String pairId, String encoded) {
+        DecodeResult decodeResult = new DecodeResult();
         checkPairId(getClass().getSimpleName(), pairId);
         Pair pair = pairMap.get(pairId);
-        assert pair != null : "Unable to retrieve pairing";
-        return pair.decode(encoded);
+        if (pair != null) {
+            decodeResult = pair.decode(encoded);
+        }
+        return decodeResult;
     }
 
 
 
     public DecodeResult decode(String pairId, byte[] encoded) {
+        DecodeResult decodeResult = new DecodeResult();
         checkPairId(getClass().getSimpleName(), pairId);
         Pair pair = pairMap.get(pairId);
-        assert pair != null : "Unable to retrieve pairing";
-        Log.d("MTE", "Pair Id - " + pair.pairId);
-        return pair.decode(encoded);
+        if (pair != null) {
+            decodeResult = pair.decode(encoded);
+        }
+        return decodeResult;
     }
 
     public void startDecrypt(String pairId) {
         checkPairId(getClass().getSimpleName(), pairId);
         Pair pair = pairMap.get(pairId);
-        assert pair != null : "Unable to retrieve pairing";
-        pair.startDecrypt();
+        if (pair != null) {
+            pair.startDecrypt();
+        }
     }
 
     public DecodeResult decryptChunk(String pairId, byte[] encoded) {
         checkPairId(getClass().getSimpleName(), pairId);
         DecodeResult result = new DecodeResult();
         Pair pair = pairMap.get(pairId);
-        assert pair != null : "Unable to retrieve pairing";
-        result.pairId = pair.pairId;
-        result.decodedBytes = pair.decryptChunk(encoded);
+        if (pair != null) {
+            result.pairId = pair.pairId;
+            result.decodedBytes = pair.decryptChunk(encoded);
+        }
         return result;
     }
 
     public int decryptChunk(String pairId, byte[] encrypted, int encOff, int encLen, byte[] decrypted, int decOff) {
         checkPairId(getClass().getSimpleName(), pairId);
+        int encryptedBytes = 0;
         Pair pair = pairMap.get(pairId);
-        assert pair != null : "Unable to retrieve pairing";
-        return pair.decryptChunk(encrypted, encOff, encLen, decrypted, decOff);
+        if (pair != null) {
+            encryptedBytes = pair.decryptChunk(encrypted, encOff, encLen, decrypted, decOff);
+        }
+        return encryptedBytes;
     }
 
     public DecodeResult finishDecrypt(String pairId) {
         checkPairId(getClass().getSimpleName(), pairId);
         DecodeResult result = new DecodeResult();
         Pair pair = pairMap.get(pairId);
-        assert pair != null : "Unable to retrieve pairing";
-        result.pairId = pair.pairId;
-        MteBase.ArrStatus arrStatus = pair.finishDecrypt();
-        result.decodedBytes = arrStatus.arr;
+        if (pair != null) {
+            result.pairId = pair.pairId;
+            MteBase.ArrStatus arrStatus = pair.finishDecrypt();
+            result.decodedBytes = arrStatus.arr;
+        }
         return result;
     }
 
@@ -171,25 +186,27 @@ public class MteHelper {
     public void startEncrypt(String pairId) {
         checkPairId(getClass().getSimpleName(), pairId);
         Pair pair = pairMap.get(pairId);
-        assert pair != null : "Unable to retrieve pairing";
-        pair.startEncrypt();
+        if (pair != null) {
+            pair.startEncrypt();
+        }
     }
 
     public void encryptChunk(String pairId, byte[] bytes, int len) {
         checkPairId(getClass().getSimpleName(), pairId);
         Pair pair = pairMap.get(pairId);
-        assert pair != null : "Unable to retrieve pairing";
-        pair.encryptChunk(bytes, len);
-
+        if (pair != null) {
+            pair.encryptChunk(bytes, len);
+        }
     }
 
     public EncodeResult finishEncrypt(String pairId) {
         EncodeResult result = new EncodeResult();
         Pair pair = pairMap.get(pairId);
-        assert pair != null : "Unable to retrieve pairing";
-        result.pairId = pair.pairId;
-        MteBase.ArrStatus arrStatus = pair.finishEncrypt();
-        result.encodedBytes = arrStatus.arr;
+        if (pair != null) {
+            result.pairId = pair.pairId;
+            MteBase.ArrStatus arrStatus = pair.finishEncrypt();
+            result.encodedBytes = arrStatus.arr;
+        }
         return result;
     }
 

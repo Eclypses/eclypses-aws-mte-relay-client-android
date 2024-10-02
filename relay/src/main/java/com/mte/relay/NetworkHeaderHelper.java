@@ -70,8 +70,7 @@ public class NetworkHeaderHelper {
         }
 
         JSONObject headersJson = new JSONObject(ctHeader);
-        EncodeResult encodedHeadersResult = mteHelper.encode(pairId, headersJson.toString());
-        return encodedHeadersResult;
+        return mteHelper.encode(pairId, headersJson.toString());
     }
 
     public static RelayOptions getRelayHeaderValues(HttpURLConnection httpConn) {
@@ -80,9 +79,11 @@ public class NetworkHeaderHelper {
             throw new RelayException("MteRelayHeader", "No x-mte-relay response header.");
         }
         RelayOptions responseRelayOptions = RelayOptions.parseMteRelayHeader(relayHeaderStr);
-        if (responseRelayOptions.pairId == null || responseRelayOptions.pairId == "") {
-            throw new RelayException("MteRelayHeader",
-                    "No pairId in x-mte-relay response header.");
+        if (responseRelayOptions != null) {
+            if (responseRelayOptions.pairId == null || responseRelayOptions.pairId == "") {
+                throw new RelayException("MteRelayHeader",
+                        "No pairId in x-mte-relay response header.");
+            }
         }
         return responseRelayOptions;
     }
@@ -109,7 +110,7 @@ public class NetworkHeaderHelper {
     }
 
     private static void processResponseHeaders(MteHelper mteHelper, String responsePairId, Map<String, List<String>> updatedResponseHeaders, String ehHeader) {
-        if (ehHeader != null && ehHeader != "") {
+        if (ehHeader != null && !ehHeader.isEmpty()) {
             DecodeResult decodeResult = mteHelper.decode(responsePairId, ehHeader);
             try {
                 JSONObject decodedHeaders = new JSONObject(decodeResult.decodedStr);

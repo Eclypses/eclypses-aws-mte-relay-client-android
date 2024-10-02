@@ -14,7 +14,7 @@ android {
         minSdk 26
         targetSdk 34
         versionCode 1
-        versionName "3.4.11"
+        versionName "3.5.0"
         setProperty("archivesBaseName", "eclypses-aws-mte-relay-client-android-release-$versionName")
     }
 
