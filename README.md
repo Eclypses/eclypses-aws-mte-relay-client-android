@@ -56,8 +56,8 @@ String[] headersToEncrypt = new String[] {"Content-Length"};
 
 relay.addToMteRequestQueue(request, headersToEncrypt, new RelayResponseListener() {
    @Override
-   public void onError(String message) {
-      // Handle errors appropriately
+   public void onError(String message, Map<String, List<String>> responseHeaders) {
+      // Handle errors appropriately and response headers as necessary
    }
 
    @Override
@@ -94,8 +94,8 @@ RelayFileRequestProperties reqProperties = new RelayFileRequestProperties(
 ``` java
 relay.uploadFile(AppSettings.relayHosts[0], reqProperties, route, new RelayResponseListener() {
    @Override
-   public void onError(String message) {
-      // Handle errors appropriately
+   public void onError(String message, Map<String, List<String>> responseHeaders) {
+      // Handle errors appropriately and response headers as necessary
    }
 
    @Override
@@ -158,8 +158,8 @@ relay.uploadFile(AppSettings.relayHosts[0], reqProperties, route, new RelayRespo
 ``` java
 relay.downloadFile(AppSettings.relayHosts[0], reqProperties, new RelayResponseListener() {
    @Override
-   public void onError(String message) {
-      // Handle errors appropriately
+   public void onError(String message, Map<String, List<String>> responseHeaders) {
+      // Handle errors appropriately and response headers as necessary
    }
 
    @Override
@@ -185,8 +185,8 @@ relay.downloadFile(AppSettings.relayHosts[0], reqProperties, new RelayResponseLi
 ``` java
 relay.rePairWithRelayServer(relayServerPath, new RelayResponseListener() {
    @Override
-   public void onError(String message) {
-         // Handle errors appropriately
+   public void onError(String message, Map<String, List<String>> responseHeaders) {
+         // Handle errors appropriately and response headers as necessary
    }
 
    @Override
