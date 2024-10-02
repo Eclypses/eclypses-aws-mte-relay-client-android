@@ -91,15 +91,7 @@ public class WebHelper {
                 response -> listener.onJsonResponse(response,
                         createNewRelayResponseHeaders(responseHeaders)
                 ), error -> {
-            if (error != null && error.networkResponse != null) {
-                listener.onError(error.networkResponse.statusCode,
-                        error.networkResponse.data,
-                        createNewRelayResponseHeaders(responseHeaders));
-            } else {
-                listener.onError(503,
-                        null,
-                        new RelayHeaders());
-            }
+                    processResponseError(error, responseHeaders, listener);
         }) {
             @Override
             public Map<String, String> getHeaders() throws AuthFailureError {
@@ -129,15 +121,7 @@ public class WebHelper {
                 response -> listener.onJsonArrayResponse(response,
                         createNewRelayResponseHeaders(responseHeaders)
                 ), error -> {
-            if (error != null && error.networkResponse != null) {
-                listener.onError(error.networkResponse.statusCode,
-                        error.networkResponse.data,
-                        createNewRelayResponseHeaders(responseHeaders));
-            } else {
-                listener.onError(503,
-                        null,
-                        new RelayHeaders());
-            }
+            processResponseError(error, responseHeaders, listener);
         }) {
 
             @Override
@@ -165,19 +149,7 @@ public class WebHelper {
                 Request.Method.POST,
                 connectionModel.url + connectionModel.route,
                 error -> {
-                    if (error != null && error.networkResponse != null && error.networkResponse.data != null) {
-                        listener.onError(error.networkResponse.statusCode,
-                                error.networkResponse.data,
-                                createNewRelayResponseHeaders(responseHeaders));
-                    } else if (error != null && error.networkResponse != null) {
-                        listener.onError(error.networkResponse.statusCode,
-                                new byte[0],
-                                createNewRelayResponseHeaders(responseHeaders));
-                    } else {
-                        listener.onError(503,
-                                null,
-                                new RelayHeaders());
-                    }
+                    processResponseError(error, responseHeaders, listener);
                 }) {
             @Override
             protected void deliverResponse(byte[] responseBytes) {
@@ -206,6 +178,27 @@ public class WebHelper {
             }
         };
         addToRequestQueue(relayRequest);
+    }
+
+    private void processResponseError(VolleyError error, RelayHeaders responseHeaders, RWHResponseListener listener) {
+        if (error == null) {
+           return;
+        }
+        if (error.networkResponse != null && error.networkResponse.data != null) {
+            parseResponseHeaders(error.networkResponse, responseHeaders);
+            listener.onError(error.networkResponse.statusCode,
+                    error.networkResponse.data,
+                    responseHeaders);
+        } else if (error.networkResponse != null) {
+            parseResponseHeaders(error.networkResponse, responseHeaders);
+            listener.onError(error.networkResponse.statusCode,
+                    new byte[0],
+                    responseHeaders);
+        } else {
+            listener.onError(503,
+                    null,
+                    new RelayHeaders());
+        }
     }
 
     private Map<String, String> processRequestHeaders(RelayConnectionModel connectionModel,

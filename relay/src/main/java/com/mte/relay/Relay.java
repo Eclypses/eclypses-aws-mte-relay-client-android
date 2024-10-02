@@ -51,9 +51,6 @@ public class Relay {
         if (instance == null) {
             instance = new Relay(context);
         }
-        if (BuildConfig.DEBUG) {
-            Log.d("MTE", "Relay Instantiated.");
-        }
         return instance;
     }
 
@@ -72,18 +69,18 @@ public class Relay {
             String authority = relayServerUrl.getAuthority();
             relayServerPath = protocol + "://" + authority + "/";
         } catch (MalformedURLException e) {
-            listener.onError(e.getMessage());
+            listener.onError(e.getMessage(), null);
         }
         getHost(relayServerPath, listener, new InstantiateHostCallback() {
             @Override
-            public void onError(String message) { listener.onError(message); }
+            public void onError(String message) { listener.onError(message, null); }
 
             @Override
             public void hostInstantiated(String hostUrl, Host host) {
                 host.sendRequest(req, headersToEncrypt, new RelayResponseListener() {
                     @Override
-                    public void onError(String message) {
-                        listener.onError(message);
+                    public void onError(String message,  Map<String, List<String>> responseHeaders) {
+                        listener.onError(message, null);
                     }
 
                     @Override
@@ -104,7 +101,7 @@ public class Relay {
 
         getHost(reqProperties.serverPath, listener, new InstantiateHostCallback() {
             @Override
-            public void onError(String message) { listener.onError(message); }
+            public void onError(String message) { listener.onError(message, null); }
 
             @Override
             public void hostInstantiated(String hostUrl, Host host) {
@@ -117,14 +114,14 @@ public class Relay {
     public void downloadFile(RelayFileRequestProperties reqProperties, RelayResponseListener listener) {
         getHost(reqProperties.serverPath, listener, new InstantiateHostCallback() {
             @Override
-            public void onError(String message) { listener.onError(message); }
+            public void onError(String message) { listener.onError(message, null); }
 
             @Override
             public void hostInstantiated(String hostUrl, Host host) {
                 try {
                     host.downloadFile(reqProperties, listener);
                 } catch (IOException e) {
-                    listener.onError(e.getMessage());
+                    listener.onError(e.getMessage(), null);
                 }
             }
         });
@@ -137,7 +134,7 @@ public class Relay {
 
                 @Override
                 public void onError(String message) {
-                    listener.onError(message);
+                    listener.onError(message, null);
                 }
 
                 @Override
@@ -154,7 +151,7 @@ public class Relay {
     public void rePairWithRelayServer(String serverUrl, RelayResponseListener listener) {
         getHost(serverUrl, listener, new InstantiateHostCallback() {
             @Override
-            public void onError(String message) { listener.onError(message); }
+            public void onError(String message) { listener.onError(message, null); }
 
             @Override
             public void hostInstantiated(String hostUrl, Host host) {
