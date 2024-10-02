@@ -39,6 +39,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -73,11 +74,12 @@ public class FileDownloadHelper {
 
     public void downloadFile(StoreStatesCallback callback) {
         Thread networkThread = new Thread(() -> {
+            Map<String, List<String>> processedHeaders = Collections.emptyMap();
             try {
                 if (httpConn.getResponseCode() == HttpURLConnection.HTTP_OK) {
                     RelayOptions responseRelayOptions = NetworkHeaderHelper.getRelayHeaderValues(httpConn);
                     responsePairId = responseRelayOptions.pairId;
-                    Map<String, List<String>> processedHeaders = NetworkHeaderHelper.processHttpConnResponseHeaders(httpConn,
+                    processedHeaders = NetworkHeaderHelper.processHttpConnResponseHeaders(httpConn,
                             mteHelper,
                             responsePairId);
                     processFileDownloadStream(downloadPath);
@@ -86,11 +88,11 @@ public class FileDownloadHelper {
                     listener.onResponse(jsonResponse, processedHeaders);
                     callback.onCallback();
                 } else {
-                    listener.onError(httpConn.getResponseMessage());
+                    listener.onError(httpConn.getResponseMessage(),processedHeaders);
                     callback.onCallback();
                 }
             } catch (IOException | JSONException e) {
-                listener.onError(e.getMessage());
+                listener.onError(e.getMessage(), processedHeaders);
             } finally {
                 httpConn.disconnect();
             }

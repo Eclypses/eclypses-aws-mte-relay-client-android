@@ -99,14 +99,14 @@
             }
             try {
                 String storedHostStr = readHostFromFile();
-                if (storedHostStr == "") {
+                if (Objects.equals(storedHostStr, "")) {
                     callback.noStoredPairs();
                     return;
                 }
                 JSONObject storedPairs = new JSONObject(storedHostStr);
                 String clientId = storedPairs.getString("clientId");
-                String pairMapStates = storedPairs.getString("pairMapStates");
-                if (pairMapStates.isEmpty() || pairMapStates == "") {
+                String pairMapStates = storedPairs.optString("pairMapStates", "");
+                if (pairMapStates.isEmpty()) {
                     callback.foundClientId(clientId);
                 } else {
                     storedHosts.put(host, storedHostStr);
@@ -114,7 +114,6 @@
                     callback.foundStoredPairs(storedHosts.get(host));
                 }
             } catch (JSONException e) {
-                Log.d("MTE", "Error: " + e.getMessage());
                 callback.onError(e.getMessage());
             }
         }
@@ -125,12 +124,13 @@
 
         void removeStoredHost() throws JSONException {
             String storedHostStr = readHostFromFile();
+
+            // If there is no file for this host, just return.
             if (Objects.equals(storedHostStr, "")) {
                 return;
             }
             JSONObject stateToStore = new JSONObject(storedHostStr);
-            stateToStore
-                    .put("pairMapStates", "");
+            stateToStore.put("pairMapStates", "");
             saveHostToFile(stateToStore.toString());
         }
 

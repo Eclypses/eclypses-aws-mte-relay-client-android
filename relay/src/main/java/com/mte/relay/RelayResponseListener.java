@@ -31,7 +31,7 @@ import java.util.Map;
 
 public interface RelayResponseListener {
 
-    void onError(String message);
+    void onError(String message, Map<String, List<String>> responseHeaders);
 
     void onResponse(byte[] responseBytes, Map<String, List<String>> responseHeaders);
 

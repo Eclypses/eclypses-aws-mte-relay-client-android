@@ -38,6 +38,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -167,10 +168,11 @@ public class FileUploadHelper {
     public void getResponse(StoreStatesCallback callback) throws IOException {
 
         int status = httpConn.getResponseCode();
+        Map<String, List<String>> processedHeaders = Collections.emptyMap();
         if (status == HttpURLConnection.HTTP_OK) {
             RelayOptions responseRelayOptions = NetworkHeaderHelper.getRelayHeaderValues(httpConn);
             String responsePairId = responseRelayOptions.pairId;
-            Map<String, List<String>> processedHeaders = NetworkHeaderHelper.processHttpConnResponseHeaders(httpConn,
+            processedHeaders = NetworkHeaderHelper.processHttpConnResponseHeaders(httpConn,
                     mteHelper,
                     responsePairId);
             InputStream inputStream = httpConn.getInputStream();
@@ -201,7 +203,7 @@ public class FileUploadHelper {
             }
             httpConn.disconnect();
         } else {
-            listener.onError("Server returned non-OK status: " + status);
+            listener.onError("Server returned non-OK status: " + status, processedHeaders);
         }
     }
 
