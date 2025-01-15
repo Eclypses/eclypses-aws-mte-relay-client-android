@@ -25,6 +25,8 @@
 package com.mte.relay;
 
 import android.util.Base64;
+import android.util.Log;
+
 import com.android.volley.BuildConfig;
 import com.eclypses.mte.MteKyber;
 import com.eclypses.mte.MteBase;
@@ -75,29 +77,30 @@ public class Pair {
     private byte[] encoderState = new byte[32];
     private byte[] decoderState = new byte[32];
 
-    public void createEncoderAndDecoder() {
+    public void createEncoderAndDecoder() throws MteException {
         instantiateEncoder();
         instantiateDecoder();
     }
 
-    private void instantiateEncoder() {
+    private void instantiateEncoder() throws MteException {
         encoder = new MteMkeEnc();
         encSecret = new byte[secretSize];
         int kyberStatus = encMteKyber.decryptSecret(encResponderEncryptedSecret, encSecret);
         checkKyberStatus(kyberStatus, "Kyber getSharedSecret Error");
-        encoder = new MteMkeEnc();
+//        encoder = new MteMkeEnc();
         encoder.setEntropy(encSecret);
         encoder.setNonce(encNonce);
         MteStatus  status = encoder.instantiate(encPersStr);
         checkMteStatus(status, "Encoder Instantiate Error");
         saveEncoderState();
-        if(BuildConfig.DEBUG) {
+        if (BuildConfig.DEBUG) {
 //             Log.i("MTE", "Encoder " + pairId + " Initial State: " + Base64.encodeToString(encoderState, Base64.DEFAULT)); // Used to compare with decoder state on server
         }
     }
 
-    private void instantiateDecoder() {
-        decoder = new MteMkeDec();
+    private void instantiateDecoder() throws MteException {
+//        decoder = new MteMkeDec();
+        decoder = new MteMkeDec(10, -63);
         decSecret = new byte[secretSize];
         int kyberStatus = decMteKyber.decryptSecret(decResponderEncryptedSecret, decSecret);
         checkKyberStatus(kyberStatus, "Kyber Decoder getSharedSecret Error");
@@ -111,7 +114,7 @@ public class Pair {
         saveDecoderState();
     }
 
-    public String encode(String message) {
+    public String encode(String message) throws MteException {
         restoreEncoderState();
         MteBase.StrStatus encodeResult = encoder.encodeB64(message);
         checkMteStatus(encodeResult.status, "Encode Error");
@@ -119,7 +122,7 @@ public class Pair {
         return encodeResult.str;
     }
 
-    public byte[] encode(byte[] bytes) {
+    public byte[] encode(byte[] bytes) throws MteException {
         restoreEncoderState();
         MteBase.ArrStatus encodeResult = encoder.encode(bytes);
         checkMteStatus(encodeResult.status, "Encode Error");
@@ -131,27 +134,27 @@ public class Pair {
         return encoder.encryptFinishBytes();
     }
 
-    public MteStatus startEncrypt() {
+    public MteStatus startEncrypt() throws MteException {
         restoreEncoderState();
         MteStatus status = encoder.startEncrypt();
         checkMteStatus(status, "Start Encrypt Error");
         return status;
     }
 
-    public MteStatus encryptChunk(byte[] bytes, int len) {
+    public MteStatus encryptChunk(byte[] bytes, int len) throws MteException {
         MteStatus status = encoder.encryptChunk(bytes, 0, len);
         checkMteStatus(status, "Encrypt Chunk Error");
         return status;
     }
 
-    public MteBase.ArrStatus finishEncrypt() {
+    public MteBase.ArrStatus finishEncrypt() throws MteException {
         MteBase.ArrStatus encodeResult = encoder.finishEncrypt();
         checkMteStatus(encodeResult.status, "Finish Encrypt Error");
         saveEncoderState();
         return encodeResult;
     }
 
-    public DecodeResult decode(String encoded) {
+    public DecodeResult decode(String encoded) throws MteException {
         DecodeResult decodeResult = new DecodeResult();
         decodeResult.pairId = pairId;
         restoreDecoderState();
@@ -162,7 +165,7 @@ public class Pair {
         return decodeResult;
     }
 
-    public DecodeResult decode(byte[] encoded) {
+    public DecodeResult decode(byte[] encoded)  throws MteException {
         DecodeResult decodeResult = new DecodeResult();
         decodeResult.pairId = pairId;
         restoreDecoderState();
@@ -173,7 +176,7 @@ public class Pair {
         return decodeResult;
     }
 
-    public MteStatus startDecrypt() {
+    public MteStatus startDecrypt() throws MteException {
         restoreDecoderState();
         MteStatus status = decoder.startDecrypt();
         checkMteStatus(status, "Start Decrypt Error");
@@ -188,7 +191,7 @@ public class Pair {
         return decoder.decryptChunk(encrypted, encOff, encLen, decrypted, decOff);
     }
 
-    public MteBase.ArrStatus finishDecrypt() {
+    public MteBase.ArrStatus finishDecrypt() throws MteException {
         MteBase.ArrStatus result = decoder.finishDecrypt();
         checkMteStatus(result.status, "Finish Decrypt Error");
         saveDecoderState();
@@ -204,19 +207,19 @@ public class Pair {
         return decoderState;
     }
 
-    private void restoreEncoderState() {
+    private void restoreEncoderState() throws MteException {
         MteStatus status = encoder.restoreState(encoderState);
         checkMteStatus(status, "Encode Restore State Error");
     }
 
-    private void saveEncoderState() {
+    private void saveEncoderState() throws MteException {
         encoderState = encoder.saveState();
         if (BuildConfig.DEBUG) {
 //            Log.i("MTE", "Encoder " + pairId + " current state: " + Base64.encodeToString(encoderState, Base64.DEFAULT)); // Used to compare with current decoder state on server
         }
     }
 
-    private void restoreDecoderState() {
+    private void restoreDecoderState() throws MteException {
         MteStatus status = decoder.restoreState(decoderState);
         checkMteStatus(status, "Decode Restore State Error");
     }
@@ -228,7 +231,7 @@ public class Pair {
         }
     }
 
-    private static void checkMteStatus(MteStatus status, String message) {
+    private static void checkMteStatus(MteStatus status, String message) throws MteException {
         if (status != MteStatus.mte_status_success) {
             throw new MteException(status, message);
         }

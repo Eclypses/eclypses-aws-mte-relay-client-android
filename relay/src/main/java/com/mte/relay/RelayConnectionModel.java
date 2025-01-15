@@ -29,7 +29,7 @@ import org.json.JSONObject;
 
 public class RelayConnectionModel {
     String url;
-    String method;
+    int method;
     String route;
     JSONObject jsonPayload;
     JSONArray jsonArrayPayload;
@@ -39,7 +39,7 @@ public class RelayConnectionModel {
     RelayOptions relayOptions;
 
     public RelayConnectionModel(String url,
-                                String method,
+                                int method,
                                 String route,
                                 JSONObject jsonPayload,
                                 JSONArray jsonArrayPayload,

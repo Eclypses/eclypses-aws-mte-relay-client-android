@@ -24,6 +24,8 @@
 
 package com.mte.relay;
 
+import android.util.Log;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -81,7 +83,6 @@ public class RelayOptions {
         args.add(options.getUrlIsEncoded() ? "1" : "0");
         args.add(options.getHeadersAreEncoded() ? "1" : "0");
         args.add(options.getBodyIsEncoded() ? "1" : "0");
-
         return String.join(",", args);
     }
 
