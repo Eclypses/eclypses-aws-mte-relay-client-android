@@ -29,6 +29,7 @@ import android.util.Log;
 
 import com.android.volley.AuthFailureError;
 import com.android.volley.BuildConfig;
+import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Header;
 import com.android.volley.NetworkResponse;
 import com.android.volley.Request;
@@ -49,9 +50,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 public class WebHelper {
-    private final String CONTENT_TYPE_KEY = "content-type";
     public static WebHelper instance;
     private static Context ctx;
     private RequestQueue requestQueue;
@@ -85,7 +86,7 @@ public class WebHelper {
 
         RelayHeaders responseHeaders = new RelayHeaders();
         JsonObjectRequest request = new JsonObjectRequest(
-                connectionModel.method.equals("HEAD") ? Request.Method.HEAD : Request.Method.POST,
+                connectionModel.method,
                 connectionModel.url + connectionModel.route,
                 connectionModel.jsonPayload,
                 response -> listener.onJsonResponse(response,
@@ -115,7 +116,7 @@ public class WebHelper {
     public void sendJsonArray(RelayConnectionModel connectionModel, Request origRequest, RWHResponseListener listener) {
         RelayHeaders responseHeaders = new RelayHeaders();
         JsonArrayRequest request = new JsonArrayRequest(
-                connectionModel.method.equals("HEAD") ? Request.Method.HEAD : Request.Method.POST,
+                connectionModel.method,
                 connectionModel.url + connectionModel.route,
                 connectionModel.jsonArrayPayload,
                 response -> listener.onJsonArrayResponse(response,
@@ -143,10 +144,10 @@ public class WebHelper {
         addToRequestQueue(request);
     }
 
-    public void sendBytes(RelayConnectionModel connectionModel, Request origRequest, RWHResponseListener listener) {
+    public void sendBytes(RelayConnectionModel connectionModel, Request<byte[]> origRequest, RWHResponseListener listener) {
         RelayHeaders responseHeaders = new RelayHeaders();
         Request<byte[]> relayRequest = new Request<byte[]>(
-                Request.Method.POST,
+                connectionModel.method,
                 connectionModel.url + connectionModel.route,
                 error -> {
                     processResponseError(error, responseHeaders, listener);
@@ -177,6 +178,10 @@ public class WebHelper {
                 }
             }
         };
+        relayRequest.setRetryPolicy(new DefaultRetryPolicy(
+                DefaultRetryPolicy.DEFAULT_TIMEOUT_MS, //After the set time elapses the request will timeout
+                0,
+                DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
         addToRequestQueue(relayRequest);
     }
 
@@ -205,14 +210,15 @@ public class WebHelper {
                                                       Request origRequest,
                                                       String contentType) throws AuthFailureError {
         Map<String, String> params = new HashMap<>();
-        params.put("content-type", contentType);
-        params.put("x-mte-relay", RelayOptions.formatMteRelayHeader(connectionModel.relayOptions));
-        params.put("x-mte-relay-eh", connectionModel.relayHeaders.encryptedDecryptedHeaders);
+        params.put(Constants.CONTENT_TYPE_KEY, contentType);
+        params.put(Constants.X_MTE_RELAY_KEY, RelayOptions.formatMteRelayHeader(connectionModel.relayOptions));
+        params.put(Constants.X_MTE_RELAY_EH_KEY, connectionModel.relayHeaders.encryptedDecryptedHeaders);
+
         // Add the rest of the headers from the original request if it's not null
         if (origRequest != null) {
             Map<String, String> headers = origRequest.getHeaders();
             for (Map.Entry<String, String> header : headers.entrySet())
-                if (!Objects.equals(header.getKey(), CONTENT_TYPE_KEY)) {
+                if (!Objects.equals(header.getKey(), Constants.CONTENT_TYPE_KEY)) {
                     params.put(header.getKey(), header.getValue());
                 }
         }
@@ -225,7 +231,7 @@ public class WebHelper {
             return;
         }
         for (Header header : response.allHeaders) {
-            if (header.getName().equals("x-mte-relay")) {
+            if (header.getName().equals(Constants.X_MTE_RELAY_KEY)) {
                 RelayOptions relayOptions = RelayOptions.parseMteRelayHeader(header.getValue());
                 if (relayOptions == null) {
                     continue;
@@ -235,7 +241,7 @@ public class WebHelper {
                 responseHeaders.encoderType = relayOptions.encodeType;
                 continue;
             }
-            if (header.getName().equals("x-mte-relay-eh")) {
+            if (header.getName().equals(Constants.X_MTE_RELAY_EH_KEY)) {
                 responseHeaders.encryptedDecryptedHeaders = header.getValue();
             }
         }
