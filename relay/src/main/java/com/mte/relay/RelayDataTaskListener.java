@@ -24,6 +24,16 @@
 
 package com.mte.relay;
 
-public interface RelayResponseListener {
-    void onCompletion(Boolean success, String message);
+import org.json.JSONObject;
+
+import java.util.List;
+import java.util.Map;
+
+public interface RelayDataTaskListener {
+
+    void onError(String message, Map<String, List<String>> responseHeaders);
+
+    void onResponse(byte[] responseBytes, Map<String, List<String>> responseHeaders);
+
+    void onResponse(JSONObject responseJson, Map<String, List<String>> responseHeaders);
 }

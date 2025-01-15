@@ -30,11 +30,8 @@ import org.json.JSONObject;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLEncoder;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -46,23 +43,21 @@ import java.util.Map;
 
 public class FileDownloadHelper {
 
-    private final String hostUrl;
-    private String charset = "UTF-8";
     private final HttpURLConnection httpConn;
     private final MteHelper mteHelper;
     private final String pairId;
     private String responsePairId;
     private final String downloadPath;
-    private final RelayResponseListener listener;
+    private final RelayDataTaskListener listener;
 
-    public FileDownloadHelper(FileDownloadProperties properties, RelayResponseListener listener) throws IOException {
-        this.hostUrl = properties.hostUrl;
-        String route = properties.route;
+    public FileDownloadHelper(FileDownloadProperties properties, RelayDataTaskListener listener) throws IOException {
+
         this.pairId = properties.relayOptions.pairId;
         this.mteHelper = properties.mteHelper;
-        URL url = encodeRoute(route, pairId);
         this.downloadPath = properties.downloadPath;
         this.listener = listener;
+
+        URL url = new URL(properties.hostUrl + properties.route);
         EncodeResult encodedHeadersResult = encodeHeaders(properties.headersToEncrypt, properties.origHeaders);
         httpConn = (HttpURLConnection) url.openConnection();
         httpConn.setUseCaches(false);
@@ -91,7 +86,7 @@ public class FileDownloadHelper {
                     listener.onError(httpConn.getResponseMessage(),processedHeaders);
                     callback.onCallback();
                 }
-            } catch (IOException | JSONException e) {
+            } catch (IOException | JSONException | MteException e) {
                 listener.onError(e.getMessage(), processedHeaders);
             } finally {
                 httpConn.disconnect();
@@ -103,7 +98,7 @@ public class FileDownloadHelper {
     private void processFileDownloadStream(String downloadPath) throws IOException {
         InputStream inputStream = httpConn.getInputStream();
         FileOutputStream outputStream = new FileOutputStream(downloadPath);
-        byte[] buffer = new byte[RelaySettings.downloadChunkSize];
+        byte[] buffer = new byte[RelaySettings.streamChunkSize];
         int bytesRead;
         mteHelper.startDecrypt(responsePairId);
         while ((bytesRead = inputStream.read(buffer)) != -1) {
@@ -125,13 +120,6 @@ public class FileDownloadHelper {
         jsonResponse.put("File Size", Files.size(path));
         jsonResponse.put("Download Location", downloadPath);
         return jsonResponse;
-    }
-
-    private URL encodeRoute(String route, String pairId) throws UnsupportedEncodingException, MalformedURLException {
-        EncodeResult encodeResult = mteHelper.encode(pairId, route);
-        encodeResult.encodedStr = URLEncoder.encode(encodeResult.encodedStr, charset);
-        String urlStr = hostUrl + encodeResult.encodedStr;
-        return new URL(urlStr);
     }
 
     private EncodeResult encodeHeaders(String[] headersToEncode, Map<String, String> origHeaders) {
