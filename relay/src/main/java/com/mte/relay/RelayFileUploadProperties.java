@@ -7,7 +7,6 @@ public class RelayFileUploadProperties {
 
     String hostUrl;
     String route;
-    File fileToUpload;
     MteHelper mteHelper;
     String[] headersToEncrypt;
     Map<String,String> origHeaders;
@@ -16,7 +15,6 @@ public class RelayFileUploadProperties {
 
     public RelayFileUploadProperties(String hostUrl,
                                      String route,
-                                     File fileToUpload,
                                      MteHelper mteHelper,
                                      String[] headersToEncrypt,
                                      Map<String, String> origHeaders,
@@ -24,7 +22,6 @@ public class RelayFileUploadProperties {
                                      RelayStreamCallback relayStreamCallback) {
         this.hostUrl = hostUrl;
         this.route = route;
-        this.fileToUpload = fileToUpload;
         this.mteHelper = mteHelper;
         this.headersToEncrypt = headersToEncrypt;
         this.origHeaders = origHeaders;
