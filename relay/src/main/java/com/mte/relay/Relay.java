@@ -89,7 +89,7 @@ public class Relay {
 
     public void uploadFile(RelayFileRequestProperties reqProperties,
                            String route,
-                           RelayDataTaskListener listener,
+                           RelayStreamResponseListener listener,
                            RelayStreamCompletionCallback completionCallback) {
         uploadFile(reqProperties, route, null, listener, completionCallback);
     }
@@ -97,12 +97,16 @@ public class Relay {
     public void uploadFile(RelayFileRequestProperties reqProperties,
                            String route,
                            String pathnamePrefix,
-                           RelayDataTaskListener listener,
+                           RelayStreamResponseListener listener,
                            RelayStreamCompletionCallback completionCallback) {
 
         getHost(reqProperties.serverPath, new InstantiateHostCallback() {
             @Override
-            public void onError(String message) { listener.onError(message, null); }
+            public void onError(String message) { listener.relayStreamResponse(
+                    false,
+                    null,
+                    message,
+                    null); }
 
             @Override
             public void hostInstantiated(String hostUrl, Host host) {
@@ -111,21 +115,31 @@ public class Relay {
         });
     }
 
-    public void downloadFile(RelayFileRequestProperties reqProperties, RelayDataTaskListener listener) {
+    public void downloadFile(RelayFileRequestProperties reqProperties, RelayStreamResponseListener listener) {
         downloadFile(reqProperties, null, listener);
     }
 
-    public void downloadFile(RelayFileRequestProperties reqProperties, String pathnamePrefix, RelayDataTaskListener listener) {
+    public void downloadFile(RelayFileRequestProperties reqProperties, String pathnamePrefix, RelayStreamResponseListener listener) {
         getHost(reqProperties.serverPath, new InstantiateHostCallback() {
             @Override
-            public void onError(String message) { listener.onError(message, null); }
+            public void onError(String message) {
+                listener.relayStreamResponse(
+                        false,
+                        null,
+                        message,
+                        null);
+            }
 
             @Override
             public void hostInstantiated(String hostUrl, Host host) {
                 try {
                     host.downloadFile(reqProperties, pathnamePrefix, listener);
                 } catch (IOException e) {
-                    listener.onError(e.getMessage(), null);
+                    listener.relayStreamResponse(
+                            false,
+                            null,
+                            e.getMessage(),
+                            null);
                 }
             }
         });

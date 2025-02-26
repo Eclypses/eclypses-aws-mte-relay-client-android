@@ -30,8 +30,6 @@ import java.util.Map;
 
 public class RelayFileRequestProperties {
 
-    public File file;
-    public String filename;
     public String serverPath;
     public String route;
     public String downloadPath;
@@ -40,25 +38,21 @@ public class RelayFileRequestProperties {
     public Map<String,String> origHeaders;
     public String[] headersToEncrypt;
 
-    public RelayFileRequestProperties(File file,
-                                      String serverPath,
+    public RelayFileRequestProperties(String serverPath,
                                       Map origHeaders,
                                       String[] headersToEncrypt,
                                       RelayStreamCallback relayStreamCallback) {
-        this.file = file;
         this.serverPath = serverPath;
         this.origHeaders = origHeaders;
         this.headersToEncrypt = headersToEncrypt;
         this.relayStreamCallback = relayStreamCallback;
     }
 
-    public RelayFileRequestProperties(String filename,
-                                      String serverPath,
+    public RelayFileRequestProperties(String serverPath,
                                       String route,
                                       String downloadPath,
                                       Map<String, String> origHeaders,
                                       String[] headersToEncrypt) {
-        this.filename = filename;
         this.serverPath = serverPath;
         this.route = route;
         this.downloadPath = downloadPath;

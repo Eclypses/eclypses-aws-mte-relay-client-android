@@ -475,13 +475,17 @@ public class Host {
     synchronized public void uploadFile(RelayFileRequestProperties reqProperties,
                                         String route,
                                         String pathnamePrefix,
-                                        RelayDataTaskListener listener,
+                                        RelayStreamResponseListener listener,
                                         RelayStreamCompletionCallback completionCallback) {
         while (!hostPaired) {
             try {
                 wait();
             } catch (InterruptedException e) {
-                listener.onError(e.getMessage(), null);
+                listener.relayStreamResponse(
+                        false,
+                        null,
+                        e.getMessage(),
+                        null);
             }
         }
         Thread sendingTread = new Thread(() -> {
@@ -490,7 +494,6 @@ public class Host {
                 RelayFileUploadProperties properties = new RelayFileUploadProperties(
                         reqProperties.serverPath,
                         route,
-                        reqProperties.file,
                         mteHelper,
                         reqProperties.headersToEncrypt,
                         reqProperties.origHeaders,
@@ -507,24 +510,37 @@ public class Host {
                     try {
                         conditionallyStoreStates();
                     } catch (JSONException e) {
-                        listener.onError("Error: " + e.getMessage(), null);
+                        listener.relayStreamResponse(
+                                false,
+                                null,
+                                e.getMessage(),
+                                null);
                     }
                 });
             } catch (IOException  | MteException e) {
-                listener.onError(getClass().getSimpleName() + " Exception. Error: " +e.getMessage(), null);
+                listener.relayStreamResponse(
+                        false,
+                        null,
+                        e.getMessage(),
+                        null);
             }
         });
         sendingTread.start();
     }
 
-    synchronized public void downloadFile(RelayFileRequestProperties reqProperties, String pathnamePrefix, RelayDataTaskListener listener) throws IOException {
+    synchronized public void downloadFile(RelayFileRequestProperties reqProperties, String pathnamePrefix, RelayStreamResponseListener listener) throws IOException {
         while (!hostPaired) {
             try {
                 wait();
             } catch (InterruptedException e) {
-                listener.onError(getClass().getSimpleName() + " Exception. Error: " +e.getMessage(), null);
+                listener.relayStreamResponse(
+                        false,
+                        null,
+                        " Exception: " +e.getMessage(),
+                        null);
             }
         }
+
         // Get PairId to do this download
         String pairId = mteHelper.getNextPairId();
         FileDownloadProperties properties = new FileDownloadProperties(
@@ -546,7 +562,11 @@ public class Host {
             try {
                 conditionallyStoreStates();
             } catch (JSONException e) {
-                listener.onError("Error: " + e.getMessage(), null);
+                listener.relayStreamResponse(
+                        false,
+                        null,
+                        e.getMessage(),
+                        null);
             }
         });
     }
@@ -556,7 +576,7 @@ public class Host {
     private void retryUploadFile(RelayFileRequestProperties reqProperties,
                                  String route,
                                  String pathnamePrefix,
-                                 RelayDataTaskListener listener,
+                                 RelayStreamResponseListener listener,
                                  RelayStreamCompletionCallback completionCallback) {
         Thread sendingTread = new Thread(() -> {
             uploadFile(reqProperties, route, pathnamePrefix, listener, completionCallback);
@@ -564,12 +584,16 @@ public class Host {
         sendingTread.start();
     }
 
-    private void retryDownloadFile(RelayFileRequestProperties reqProperties, String pathnamePrefix, RelayDataTaskListener listener) {
+    private void retryDownloadFile(RelayFileRequestProperties reqProperties, String pathnamePrefix, RelayStreamResponseListener listener) {
         Thread sendingTread = new Thread(() -> {
             try {
                 downloadFile(reqProperties, pathnamePrefix, listener);
             } catch (IOException e) {
-                listener.onError("Error: " + e.getMessage(), null);
+                listener.relayStreamResponse(
+                        false,
+                        null,
+                        "Exception: " + e.getMessage(),
+                        null);
             }
         });
         sendingTread.start();
