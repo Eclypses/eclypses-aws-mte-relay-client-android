@@ -24,6 +24,8 @@
 
 package com.mte.relay;
 
+import android.util.Log;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -45,30 +47,23 @@ public class FileUploadHelper {
     private final OutputStream outputStream;
     private final MteHelper mteHelper;
     private final String pairId;
-    private final RelayDataTaskListener listener;
+    private final RelayStreamResponseListener listener;
     private final RelayStreamCompletionCallback completionCallback;
     private int origContentLength = 0;
     private final RelayStreamCallback relayStreamCallback;
     private PipedOutputStream pipedOutputStream;
     private PipedInputStream pipedInputStream;
 
-    public FileUploadHelper(RelayFileUploadProperties properties, RelayDataTaskListener listener, RelayStreamCompletionCallback completionCallback) throws IOException {
+    public FileUploadHelper(RelayFileUploadProperties properties, RelayStreamResponseListener listener, RelayStreamCompletionCallback completionCallback) throws IOException {
         this.relayStreamCallback = properties.relayStreamCallback;
         this.completionCallback = completionCallback;
-        File fileToUpload = properties.fileToUpload;
-        // Check that file size is less than 2 gig with a little room for FinishEncrypt bytes
-        if (fileToUpload.length() > 2147480000) {
-            throw new RelayException("RelayFileUploadHelper", "File to upload too large.");
-        }
-
         this.pairId = properties.relayOptions.pairId;
         this.mteHelper = properties.mteHelper;
-
         URL url = new URL(properties.hostUrl + properties.route);
         this.listener = listener;
-
-        origContentLength = Integer.parseInt(properties.origHeaders.get("Content-Length"));
+        origContentLength = Integer.parseInt(properties.origHeaders.get("content-length"));
         int relayContentLength = origContentLength + getEncryptFinishBytes();
+
         EncodeResult encodedHeadersResult = NetworkHeaderHelper.processRequestHeaders(mteHelper,
                 pairId,
                 properties.headersToEncrypt,
@@ -193,14 +188,22 @@ public class FileUploadHelper {
                 sb.append(new String(finishEncryptResult.decodedBytes, charset));
             }
 //            try {
-                listener.onResponse(new JSONObject(sb.toString()), processedHeaders);
+                listener.relayStreamResponse(
+                        true,
+                        sb.toString(),
+                        null,
+                        processedHeaders);
                 callback.onCallback();
-            } catch (JSONException | MteException e) {
+            } catch ( MteException e) {
                 throw new RelayException("RelayFileUploadHelper", "Unable to convert response to JSON. Exception: " + e);
             }
             httpConn.disconnect();
         } else {
-            listener.onError("Server returned non-OK status: " + status, processedHeaders);
+            listener.relayStreamResponse(
+                    false,
+                    null,
+                    "Server returned non-OK status: " + status,
+                    processedHeaders);
         }
     }
 

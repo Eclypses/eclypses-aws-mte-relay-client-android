@@ -48,9 +48,9 @@ public class FileDownloadHelper {
     private final String pairId;
     private String responsePairId;
     private final String downloadPath;
-    private final RelayDataTaskListener listener;
+    private final RelayStreamResponseListener listener;
 
-    public FileDownloadHelper(FileDownloadProperties properties, RelayDataTaskListener listener) throws IOException {
+    public FileDownloadHelper(FileDownloadProperties properties, RelayStreamResponseListener listener) throws IOException {
 
         this.pairId = properties.relayOptions.pairId;
         this.mteHelper = properties.mteHelper;
@@ -80,14 +80,26 @@ public class FileDownloadHelper {
                     processFileDownloadStream(downloadPath);
 
                     JSONObject jsonResponse = getJsonResponse(downloadPath);
-                    listener.onResponse(jsonResponse, processedHeaders);
+                    listener.relayStreamResponse(
+                            true,
+                            jsonResponse.toString(2),
+                            null,
+                    processedHeaders);
                     callback.onCallback();
                 } else {
-                    listener.onError(httpConn.getResponseMessage(),processedHeaders);
+                    listener.relayStreamResponse(
+                            false,
+                            null,
+                            httpConn.getResponseMessage(),
+                            processedHeaders);
                     callback.onCallback();
                 }
             } catch (IOException | JSONException | MteException e) {
-                listener.onError(e.getMessage(), processedHeaders);
+                listener.relayStreamResponse(
+                        false,
+                        null,
+                        e.getMessage(),
+                        processedHeaders);
             } finally {
                 httpConn.disconnect();
             }
