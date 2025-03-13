@@ -25,7 +25,6 @@
 package com.mte.relay;
 
 import android.content.Context;
-import android.util.Log;
 
 import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
@@ -40,13 +39,13 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
 public class Host {
 
+    // region Class Variables
     boolean hostPaired = false;
     Context ctx;
     String hostUrl, hostUrlB64;
@@ -56,7 +55,9 @@ public class Host {
     private final Object lock = new Object();
     private int rePairAttempts = 1;
     private String hostClientId;
+    // endregion
 
+    // region Constructors
     public Host(Context ctx, String hostUrl, InstantiateHostCallback callback) {
         this.ctx = ctx;
         this.hostUrl = hostUrl;
@@ -96,7 +97,135 @@ public class Host {
         });
         storageThread.start();
     }
+    // endregion
 
+    // region Public Methods
+    public <T> void sendRequest(Request<T> req, String[] headersToEncrypt, String pathnamePrefix, RelayDataTaskListener listener) {
+        Thread sendingTread = new Thread(() -> {
+            try {
+                sendUpdatedRequest(req, headersToEncrypt, pathnamePrefix, listener);
+            } catch (InterruptedException | UnsupportedEncodingException e) {
+                listener.onError(e.getMessage(), null);
+            }
+        });
+        sendingTread.start();
+    }
+
+    synchronized public void uploadFile(RelayFileRequestProperties reqProperties,
+                                        String route,
+                                        String pathnamePrefix,
+                                        RelayStreamResponseListener listener,
+                                        RelayStreamCompletionCallback completionCallback) {
+        while (!hostPaired) {
+            try {
+                wait();
+            } catch (InterruptedException e) {
+                listener.relayStreamResponse(
+                        false,
+                        null,
+                        e.getMessage(),
+                        null);
+            }
+        }
+        Thread sendingTread = new Thread(() -> {
+            try {
+                String pairId = mteHelper.getNextPairId();
+                RelayFileUploadProperties properties = new RelayFileUploadProperties(
+                        reqProperties.serverPath,
+                        route,
+                        mteHelper,
+                        reqProperties.headersToEncrypt,
+                        reqProperties.origHeaders,
+                        setRelayOptions(true, pairId),
+                        reqProperties.relayStreamCallback);
+
+                // Encrypt route and inject pathnamePrefix if it exists
+                EncodeResult encryptRouteResult = encryptRoute(route, pathnamePrefix);
+                properties.route = encryptRouteResult.encodedStr;
+                properties.relayOptions.pairId = encryptRouteResult.pairId;
+
+                FileUploadHelper fileUploadHelper = new FileUploadHelper(properties, listener, completionCallback);
+                fileUploadHelper.encryptAndSend(() -> {
+                    try {
+                        conditionallyStoreStates();
+                    } catch (JSONException e) {
+                        listener.relayStreamResponse(
+                                false,
+                                null,
+                                e.getMessage(),
+                                null);
+                    }
+                });
+            } catch (IOException  | MteException e) {
+                listener.relayStreamResponse(
+                        false,
+                        null,
+                        e.getMessage(),
+                        null);
+            }
+        });
+        sendingTread.start();
+    }
+
+    synchronized public void downloadFile(RelayFileRequestProperties reqProperties, String pathnamePrefix, RelayStreamResponseListener listener) throws IOException {
+        while (!hostPaired) {
+            try {
+                wait();
+            } catch (InterruptedException e) {
+                listener.relayStreamResponse(
+                        false,
+                        null,
+                        " Exception: " +e.getMessage(),
+                        null);
+            }
+        }
+
+        // Get PairId to do this download
+        String pairId = mteHelper.getNextPairId();
+        FileDownloadProperties properties = new FileDownloadProperties(
+                reqProperties.serverPath,
+                reqProperties.route,
+                reqProperties.downloadPath,
+                mteHelper,
+                reqProperties.headersToEncrypt,
+                reqProperties.origHeaders,
+                setRelayOptions(false, pairId));
+
+        // Encrypt route and inject pathnamePrefix if it exists
+        EncodeResult encryptRouteResult = encryptRoute(reqProperties.route, pathnamePrefix);
+        properties.route = encryptRouteResult.encodedStr;
+        properties.relayOptions.pairId = encryptRouteResult.pairId;
+
+        FileDownloadHelper connectionHelper = new FileDownloadHelper(properties, listener);
+        connectionHelper.downloadFile(() -> {
+            try {
+                conditionallyStoreStates();
+            } catch (JSONException e) {
+                listener.relayStreamResponse(
+                        false,
+                        null,
+                        e.getMessage(),
+                        null);
+            }
+        });
+    }
+
+    public void rePairWithHost(InstantiateHostCallback callback) {
+        try {
+            hostStorageHelper.removeStoredHost();
+            hostPaired = false;
+            if (mteHelper.pairMap != null) {
+                mteHelper.pairMap.clear();
+            }
+            Thread pairingTread = new Thread(() -> checkForRelayServer(callback));
+            pairingTread.start();
+        } catch (JSONException e) {
+            callback.onError(e.getMessage());
+        }
+    }
+    // endregion
+
+    // region Pairing Private Methods
     private void pairWithHost(InstantiateHostCallback callback) {
         Thread pairingThread = new Thread(() -> {
             synchronized (lock) {
@@ -126,39 +255,6 @@ public class Host {
         } catch (JSONException e) {
             callback.onError(e.getMessage());
         }
-    }
-
-    public <T> void sendRequest(Request<T> req, String[] headersToEncrypt, String pathnamePrefix, RelayDataTaskListener listener) {
-        Thread sendingTread = new Thread(() -> {
-            try {
-                sendUpdatedRequest(req, headersToEncrypt, pathnamePrefix, listener);
-            } catch (InterruptedException | UnsupportedEncodingException e) {
-                listener.onError(e.getMessage(), null);
-            }
-        });
-        sendingTread.start();
-    }
-
-    public <T> void reSendRequest(Request<T> req, String[] headersToEncrypt, String pathnamePrefix, RelayDataTaskListener listener) {
-        Thread sendingTread = new Thread(() -> {
-            try {
-                sendUpdatedRequest(req, headersToEncrypt, pathnamePrefix, listener);
-            } catch (InterruptedException | UnsupportedEncodingException e) {
-                listener.onError(e.getMessage(), null);
-            }
-        });
-        sendingTread.start();
-    }
-
-    RelayOptions setRelayOptions(boolean bodyIsEncoded, String pairId) {
-        String clientId = hostClientId == null ? "" : hostClientId;
-        return new RelayOptions(
-                clientId,
-                pairId,
-                "MKE",
-                true,
-                true,
-                bodyIsEncoded);
     }
 
     synchronized private void checkForRelayServer(InstantiateHostCallback callback) {
@@ -291,6 +387,31 @@ public class Host {
         notify();
     }
 
+    private void rePairCheck(int code, InstantiateHostCallback callback) {
+        if (559 <= code && code <= 569) {
+            if (rePairAttempts < RelaySettings.pairPoolSize) {
+                rePairAttempts ++;
+                rePairWithHost(callback);
+            }
+        }
+    }
+
+    private void conditionallyStoreStates() throws JSONException {
+        JSONObject stateToStore = new JSONObject();
+        String pairMapStates = "";
+        stateToStore.put("clientId", hostClientId);
+        stateToStore.put("pairMapStates", pairMapStates);
+
+        // If we are persisting pairs, get the pair states and overwrite that element of the JSONObject.
+        if (RelaySettings.persistPairs) {
+            pairMapStates = mteHelper.getPairMapStates();
+            stateToStore.put("pairMapStates", pairMapStates);
+        }
+        hostStorageHelper.saveHostToFile(stateToStore.toString());
+    }
+    // endregion
+
+    // region Proxy Private Methods
     synchronized private void sendUpdatedRequest(Request origRequest,
                                                  String[] headersToEncrypt,
                                                  String pathnamePrefix,
@@ -399,28 +520,26 @@ public class Host {
             }
         });
     }
-
-    private void rePairCheck(int code, InstantiateHostCallback callback) {
-        if (559 <= code && code <= 569) {
-            if (rePairAttempts < RelaySettings.pairPoolSize) {
-                rePairAttempts ++;
-                rePairWithHost(callback);
+    private <T> void reSendRequest(Request<T> req, String[] headersToEncrypt, String pathnamePrefix, RelayDataTaskListener listener) {
+        Thread sendingTread = new Thread(() -> {
+            try {
+                sendUpdatedRequest(req, headersToEncrypt, pathnamePrefix, listener);
+            } catch (InterruptedException | UnsupportedEncodingException e) {
+                listener.onError(e.getMessage(), null);
             }
-        }
+        });
+        sendingTread.start();
     }
 
-    private void conditionallyStoreStates() throws JSONException {
-        JSONObject stateToStore = new JSONObject();
-        String pairMapStates = "";
-        stateToStore.put("clientId", hostClientId);
-        stateToStore.put("pairMapStates", pairMapStates);
-
-        // If we are persisting pairs, get the pair states and overwrite that element of the JSONObject.
-        if (RelaySettings.persistPairs) {
-            pairMapStates = mteHelper.getPairMapStates();
-            stateToStore.put("pairMapStates", pairMapStates);
-        }
-        hostStorageHelper.saveHostToFile(stateToStore.toString());
+    RelayOptions setRelayOptions(boolean bodyIsEncoded, String pairId) {
+        String clientId = hostClientId == null ? "" : hostClientId;
+        return new RelayOptions(
+                clientId,
+                pairId,
+                "MKE",
+                true,
+                true,
+                bodyIsEncoded);
     }
 
     private EncodeResult encryptRoute(String route, String pathnamePrefix) throws UnsupportedEncodingException {
@@ -472,107 +591,6 @@ public class Host {
         }
     }
 
-    synchronized public void uploadFile(RelayFileRequestProperties reqProperties,
-                                        String route,
-                                        String pathnamePrefix,
-                                        RelayStreamResponseListener listener,
-                                        RelayStreamCompletionCallback completionCallback) {
-        while (!hostPaired) {
-            try {
-                wait();
-            } catch (InterruptedException e) {
-                listener.relayStreamResponse(
-                        false,
-                        null,
-                        e.getMessage(),
-                        null);
-            }
-        }
-        Thread sendingTread = new Thread(() -> {
-            try {
-                String pairId = mteHelper.getNextPairId();
-                RelayFileUploadProperties properties = new RelayFileUploadProperties(
-                        reqProperties.serverPath,
-                        route,
-                        mteHelper,
-                        reqProperties.headersToEncrypt,
-                        reqProperties.origHeaders,
-                        setRelayOptions(true, pairId),
-                        reqProperties.relayStreamCallback);
-
-                // Encrypt route and inject pathnamePrefix if it exists
-                EncodeResult encryptRouteResult = encryptRoute(route, pathnamePrefix);
-                properties.route = encryptRouteResult.encodedStr;
-                properties.relayOptions.pairId = encryptRouteResult.pairId;
-
-                FileUploadHelper fileUploadHelper = new FileUploadHelper(properties, listener, completionCallback);
-                fileUploadHelper.encryptAndSend(() -> {
-                    try {
-                        conditionallyStoreStates();
-                    } catch (JSONException e) {
-                        listener.relayStreamResponse(
-                                false,
-                                null,
-                                e.getMessage(),
-                                null);
-                    }
-                });
-            } catch (IOException  | MteException e) {
-                listener.relayStreamResponse(
-                        false,
-                        null,
-                        e.getMessage(),
-                        null);
-            }
-        });
-        sendingTread.start();
-    }
-
-    synchronized public void downloadFile(RelayFileRequestProperties reqProperties, String pathnamePrefix, RelayStreamResponseListener listener) throws IOException {
-        while (!hostPaired) {
-            try {
-                wait();
-            } catch (InterruptedException e) {
-                listener.relayStreamResponse(
-                        false,
-                        null,
-                        " Exception: " +e.getMessage(),
-                        null);
-            }
-        }
-
-        // Get PairId to do this download
-        String pairId = mteHelper.getNextPairId();
-        FileDownloadProperties properties = new FileDownloadProperties(
-                reqProperties.serverPath,
-                reqProperties.route,
-                reqProperties.downloadPath,
-                mteHelper,
-                reqProperties.headersToEncrypt,
-                reqProperties.origHeaders,
-                setRelayOptions(false, pairId));
-
-        // Encrypt route and inject pathnamePrefix if it exists
-        EncodeResult encryptRouteResult = encryptRoute(reqProperties.route, pathnamePrefix);
-        properties.route = encryptRouteResult.encodedStr;
-        properties.relayOptions.pairId = encryptRouteResult.pairId;
-
-        FileDownloadHelper connectionHelper = new FileDownloadHelper(properties, listener);
-        connectionHelper.downloadFile(() -> {
-            try {
-                conditionallyStoreStates();
-            } catch (JSONException e) {
-                listener.relayStreamResponse(
-                        false,
-                        null,
-                        e.getMessage(),
-                        null);
-            }
-        });
-    }
-
-
-
     private void retryUploadFile(RelayFileRequestProperties reqProperties,
                                  String route,
                                  String pathnamePrefix,
@@ -599,20 +617,6 @@ public class Host {
         sendingTread.start();
     }
 
-    public void rePairWithHost(InstantiateHostCallback callback) {
-        try {
-            hostStorageHelper.removeStoredHost();
-            hostPaired = false;
-            if (mteHelper.pairMap != null) {
-                mteHelper.pairMap.clear();
-            }
-            Thread pairingTread = new Thread(() -> checkForRelayServer(callback));
-            pairingTread.start();
-        } catch (JSONException e) {
-            callback.onError(e.getMessage());
-        }
-    }
-
     private byte[] convertB64ToBytes(String value) {
         return Base64.getDecoder().decode(value);
     }
@@ -620,5 +624,5 @@ public class Host {
     String bytesToB64Str(byte[] bytes) {
         return Base64.getEncoder().encodeToString(bytes);
     }
-
+    // endregion
 }
