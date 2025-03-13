@@ -45,30 +45,34 @@ public class NetworkHeaderHelper {
                                                      String pairId,
                                                      String[] headersToEncode,
                                                      Map<String, String> origHeaders) {
+if (headersToEncode != null) {
+    Map<String, String> ctHeader = new HashMap<>();
 
-        Map<String, String> ctHeader = new HashMap<>();
-
-        // encode original headers as necessary
-        List<String> headersToEncodeList = Arrays.asList(headersToEncode);
-        for (Map.Entry<String, String> origHeader : origHeaders.entrySet()) {
-            // Content-Type always gets encrypted if it exists
-            if (origHeader.getKey().equals("content-type") ||
-                    origHeader.getKey().equals("Content-Type")) {
-                ctHeader.put(origHeader.getKey(), origHeader.getValue());
-                break;
-            }
-            if (headersToEncodeList.contains(origHeader.getKey())) {
-                ctHeader.put(origHeader.getKey(), origHeader.getValue());
-            }
+    // encode original headers as necessary
+    List<String> headersToEncodeList = Arrays.asList(headersToEncode);
+    for (Map.Entry<String, String> origHeader : origHeaders.entrySet()) {
+        // Content-Type always gets encrypted if it exists
+        if (origHeader.getKey().equals("content-type") ||
+                origHeader.getKey().equals("Content-Type")) {
+            ctHeader.put(origHeader.getKey(), origHeader.getValue());
+            break;
         }
-
-        // Remove headers to be encoded from Original Headers Map
-        for (Map.Entry<String, String> headerToEncode : ctHeader.entrySet()) {
-            origHeaders.remove(headerToEncode.getKey());
+        if (headersToEncodeList.contains(origHeader.getKey())) {
+            ctHeader.put(origHeader.getKey(), origHeader.getValue());
         }
+    }
 
-        JSONObject headersJson = new JSONObject(ctHeader);
-        return mteHelper.encode(pairId, headersJson.toString());
+    // Remove headers to be encoded from Original Headers Map
+    for (Map.Entry<String, String> headerToEncode : ctHeader.entrySet()) {
+        origHeaders.remove(headerToEncode.getKey());
+    }
+
+    JSONObject headersJson = new JSONObject(ctHeader);
+    return mteHelper.encode(pairId, headersJson.toString());
+} else {
+    return new EncodeResult(pairId, "");
+}
+
     }
 
     public static RelayOptions getRelayHeaderValues(HttpURLConnection httpConn) {

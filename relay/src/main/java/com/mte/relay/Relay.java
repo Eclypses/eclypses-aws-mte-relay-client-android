@@ -25,27 +25,26 @@
 package com.mte.relay;
 
 import android.content.Context;
-import android.util.Log;
 
 import com.android.volley.Request;
 import com.eclypses.mte.MteBase;
-
-import org.json.JSONObject;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class Relay {
 
+    // region Class Variables
     private static Relay instance;
     private final Map<String, Host> pairedHosts = new HashMap<>();
     private final Context ctx;
     private final RelayResponseListener relayResponseListener;
+    // endregion
 
+    // region Constructors
     public static Relay getInstance(Context context, RelayResponseListener listener) {
         if (instance == null) {
             instance = new Relay(context, listener);
@@ -60,7 +59,9 @@ public class Relay {
         ctx = context;
         relayResponseListener = listener;
     }
+    // endregion
 
+    // region Public Methods
     public <T> void addToMteRequestQueue(Request<T> req, String[] headersToEncrypt, RelayDataTaskListener listener) {
         addToMteRequestQueue(req, headersToEncrypt, null, listener);
     }
@@ -145,26 +146,6 @@ public class Relay {
         });
     }
 
-    private void getHost(String hostUrl, InstantiateHostCallback callback) {
-        final Host[] hostToReturn = { pairedHosts.get(hostUrl) };
-        if (hostToReturn[0] == null) {
-            new Host(ctx, hostUrl, new InstantiateHostCallback() {
-                @Override
-                public void onError(String message) {
-                    relayResponseListener.onCompletion(false, message);
-                }
-
-                @Override
-                public void hostInstantiated(String hostUrl, Host host) {
-                    pairedHosts.put(hostUrl, host);
-                    callback.hostInstantiated(hostUrl, host);
-                }
-            });
-        } else {
-            callback.hostInstantiated(hostUrl, hostToReturn[0]);
-        }
-    }
-
     public void rePairWithRelayServer(String serverUrl) {
         getHost(serverUrl, new InstantiateHostCallback() {
             @Override
@@ -217,24 +198,12 @@ public class Relay {
         return responseMessage;
     }
 
-    public int getStreamChunkSizeSetting() {
-        return RelaySettings.streamChunkSize;
-    }
-
     public void setStreamChunkSize(int newSize) {
         RelaySettings.streamChunkSize = newSize;
     }
 
-    public int getPairPoolSizeSetting() {
-        return RelaySettings.pairPoolSize;
-    }
-
     public void setPairPoolSize(int newSize) {
         RelaySettings.pairPoolSize = newSize;
-    }
-
-    public boolean getPersistPairsSetting() {
-        return RelaySettings.persistPairs;
     }
 
     public void setPersistPairs(boolean bool) {
@@ -244,6 +213,40 @@ public class Relay {
     public String[] getHostList() {
         return pairedHosts.keySet().toArray(new String[0]);
     }
+    // endregion
 
+    // region Private Methods
+    private void getHost(String hostUrl, InstantiateHostCallback callback) {
+        final Host[] hostToReturn = { pairedHosts.get(hostUrl) };
+        if (hostToReturn[0] == null) {
+            new Host(ctx, hostUrl, new InstantiateHostCallback() {
+                @Override
+                public void onError(String message) {
+                    relayResponseListener.onCompletion(false, message);
+                }
+
+                @Override
+                public void hostInstantiated(String hostUrl, Host host) {
+                    pairedHosts.put(hostUrl, host);
+                    callback.hostInstantiated(hostUrl, host);
+                }
+            });
+        } else {
+            callback.hostInstantiated(hostUrl, hostToReturn[0]);
+        }
+    }
+
+    private int getStreamChunkSizeSetting() {
+        return RelaySettings.streamChunkSize;
+    }
+
+    private int getPairPoolSizeSetting() {
+        return RelaySettings.pairPoolSize;
+    }
+
+    private boolean getPersistPairsSetting() {
+        return RelaySettings.persistPairs;
+    }
+    // endregion
 }
 
