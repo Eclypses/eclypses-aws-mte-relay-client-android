@@ -100,10 +100,10 @@ public class Host {
     // endregion
 
     // region Public Methods
-    public <T> void sendRequest(Request<T> req, String[] headersToEncrypt, String pathnamePrefix, RelayDataTaskListener listener) {
+    public <T> void sendRequest(Request<T> req, String[] headersToEncrypt, RelayDataTaskListener listener) {
         Thread sendingTread = new Thread(() -> {
             try {
-                sendUpdatedRequest(req, headersToEncrypt, pathnamePrefix, listener);
+                sendUpdatedRequest(req, headersToEncrypt, listener);
             } catch (InterruptedException | UnsupportedEncodingException e) {
                 listener.onError(e.getMessage(), null);
             }
@@ -113,7 +113,6 @@ public class Host {
 
     synchronized public void uploadFile(RelayFileRequestProperties reqProperties,
                                         String route,
-                                        String pathnamePrefix,
                                         RelayStreamResponseListener listener,
                                         RelayStreamCompletionCallback completionCallback) {
         while (!hostPaired) {
@@ -140,7 +139,7 @@ public class Host {
                         reqProperties.relayStreamCallback);
 
                 // Encrypt route and inject pathnamePrefix if it exists
-                EncodeResult encryptRouteResult = encryptRoute(route, pathnamePrefix);
+                EncodeResult encryptRouteResult = encryptRoute(route);
                 properties.route = encryptRouteResult.encodedStr;
                 properties.relayOptions.pairId = encryptRouteResult.pairId;
 
@@ -167,7 +166,7 @@ public class Host {
         sendingTread.start();
     }
 
-    synchronized public void downloadFile(RelayFileRequestProperties reqProperties, String pathnamePrefix, RelayStreamResponseListener listener) throws IOException {
+    synchronized public void downloadFile(RelayFileRequestProperties reqProperties, RelayStreamResponseListener listener) throws IOException {
         while (!hostPaired) {
             try {
                 wait();
@@ -192,7 +191,7 @@ public class Host {
                 setRelayOptions(false, pairId));
 
         // Encrypt route and inject pathnamePrefix if it exists
-        EncodeResult encryptRouteResult = encryptRoute(reqProperties.route, pathnamePrefix);
+        EncodeResult encryptRouteResult = encryptRoute(reqProperties.route);
         properties.route = encryptRouteResult.encodedStr;
         properties.relayOptions.pairId = encryptRouteResult.pairId;
 
@@ -414,7 +413,6 @@ public class Host {
     // region Proxy Private Methods
     synchronized private void sendUpdatedRequest(Request origRequest,
                                                  String[] headersToEncrypt,
-                                                 String pathnamePrefix,
                                                  RelayDataTaskListener listener) throws InterruptedException, UnsupportedEncodingException {
         while (!hostPaired) {
             wait();
@@ -431,7 +429,7 @@ public class Host {
         }
 
         // Encrypt the route and inject the pathnamePrefix if it exists
-        EncodeResult encryptedRouteResult = encryptRoute(origRoute, pathnamePrefix);
+        EncodeResult encryptedRouteResult = encryptRoute(origRoute);
         EncodeResult encryptHeadersResult = encryptHeaders(encryptedRouteResult.pairId, origRequest, headersToEncrypt, listener);
         EncodeResult encryptBodyBytesResult = encryptBodyBytes(encryptHeadersResult.pairId, origRequest, listener);
         byte[] encryptedBodyBytes = encryptBodyBytesResult.encodedBytes != null ? encryptBodyBytesResult.encodedBytes : null;
@@ -462,7 +460,7 @@ public class Host {
 
                     @Override
                     public void hostInstantiated(String hostUrl, Host host) {
-                        reSendRequest(origRequest, headersToEncrypt, pathnamePrefix, listener);
+                        reSendRequest(origRequest, headersToEncrypt, listener);
                     }
                 });
                 Map<String, List<String>> responseHeaders = null;
@@ -520,10 +518,10 @@ public class Host {
             }
         });
     }
-    private <T> void reSendRequest(Request<T> req, String[] headersToEncrypt, String pathnamePrefix, RelayDataTaskListener listener) {
+    private <T> void reSendRequest(Request<T> req, String[] headersToEncrypt, RelayDataTaskListener listener) {
         Thread sendingTread = new Thread(() -> {
             try {
-                sendUpdatedRequest(req, headersToEncrypt, pathnamePrefix, listener);
+                sendUpdatedRequest(req, headersToEncrypt, listener);
             } catch (InterruptedException | UnsupportedEncodingException e) {
                 listener.onError(e.getMessage(), null);
             }
@@ -542,22 +540,9 @@ public class Host {
                 bodyIsEncoded);
     }
 
-    private EncodeResult encryptRoute(String route, String pathnamePrefix) throws UnsupportedEncodingException {
-        EncodeResult encryptedRouteResult = null;
+    private EncodeResult encryptRoute(String route) throws UnsupportedEncodingException {
         route = route.substring(1); // remove the preceding '/'
-        encryptedRouteResult = mteHelper.encode(null, route);
-
-        // Inject the pathnamePrefix if it exists
-        if (pathnamePrefix != null) {
-
-            // Remove the preceding "/" if it exists
-            if (!pathnamePrefix.startsWith("/")) {
-                pathnamePrefix = pathnamePrefix.substring(1);
-            }
-
-            // Inject pathnamePrefix
-            encryptedRouteResult.encodedStr = pathnamePrefix + "/" + encryptedRouteResult.encodedStr;
-        }
+        EncodeResult encryptedRouteResult = mteHelper.encode(null, route);
 
         // UrlEncode the route
         String urlEncodedRoute = URLEncoder.encode(encryptedRouteResult.encodedStr, StandardCharsets.UTF_8.toString());
@@ -597,7 +582,7 @@ public class Host {
                                  RelayStreamResponseListener listener,
                                  RelayStreamCompletionCallback completionCallback) {
         Thread sendingTread = new Thread(() -> {
-            uploadFile(reqProperties, route, pathnamePrefix, listener, completionCallback);
+            uploadFile(reqProperties, route, listener, completionCallback);
         });
         sendingTread.start();
     }
@@ -605,7 +590,7 @@ public class Host {
     private void retryDownloadFile(RelayFileRequestProperties reqProperties, String pathnamePrefix, RelayStreamResponseListener listener) {
         Thread sendingTread = new Thread(() -> {
             try {
-                downloadFile(reqProperties, pathnamePrefix, listener);
+                downloadFile(reqProperties, listener);
             } catch (IOException e) {
                 listener.relayStreamResponse(
                         false,
