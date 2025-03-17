@@ -138,7 +138,7 @@ public class Host {
                         setRelayOptions(true, pairId),
                         reqProperties.relayStreamCallback);
 
-                // Encrypt route and inject pathnamePrefix if it exists
+                // Encrypt route
                 EncodeResult encryptRouteResult = encryptRoute(route);
                 properties.route = encryptRouteResult.encodedStr;
                 properties.relayOptions.pairId = encryptRouteResult.pairId;
@@ -155,7 +155,9 @@ public class Host {
                                 null);
                     }
                 });
-            } catch (IOException  | MteException e) {
+            } catch (IOException |
+                     MteException |
+                    RelayException e) {
                 listener.relayStreamResponse(
                         false,
                         null,
@@ -578,7 +580,6 @@ public class Host {
 
     private void retryUploadFile(RelayFileRequestProperties reqProperties,
                                  String route,
-                                 String pathnamePrefix,
                                  RelayStreamResponseListener listener,
                                  RelayStreamCompletionCallback completionCallback) {
         Thread sendingTread = new Thread(() -> {
@@ -587,7 +588,7 @@ public class Host {
         sendingTread.start();
     }
 
-    private void retryDownloadFile(RelayFileRequestProperties reqProperties, String pathnamePrefix, RelayStreamResponseListener listener) {
+    private void retryDownloadFile(RelayFileRequestProperties reqProperties, RelayStreamResponseListener listener) {
         Thread sendingTread = new Thread(() -> {
             try {
                 downloadFile(reqProperties, listener);
