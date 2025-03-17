@@ -24,12 +24,6 @@
 
 package com.mte.relay;
 
-import android.util.Log;
-
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -43,6 +37,7 @@ import java.util.Map;
 
 public class FileUploadHelper {
 
+    // region Class Variables
     private final HttpURLConnection httpConn;
     private final OutputStream outputStream;
     private final MteHelper mteHelper;
@@ -53,15 +48,20 @@ public class FileUploadHelper {
     private final RelayStreamCallback relayStreamCallback;
     private PipedOutputStream pipedOutputStream;
     private PipedInputStream pipedInputStream;
+    // endregion
 
-    public FileUploadHelper(RelayFileUploadProperties properties, RelayStreamResponseListener listener, RelayStreamCompletionCallback completionCallback) throws IOException {
+    // region Constructors
+    public FileUploadHelper(RelayFileUploadProperties properties,
+                            RelayStreamResponseListener listener,
+                            RelayStreamCompletionCallback completionCallback)
+            throws IOException, RelayException {
         this.relayStreamCallback = properties.relayStreamCallback;
         this.completionCallback = completionCallback;
         this.pairId = properties.relayOptions.pairId;
         this.mteHelper = properties.mteHelper;
         URL url = new URL(properties.hostUrl + properties.route);
         this.listener = listener;
-        origContentLength = Integer.parseInt(properties.origHeaders.get("content-length"));
+        origContentLength = getContentLengthHeader(properties.origHeaders);
         int relayContentLength = origContentLength + getEncryptFinishBytes();
 
         EncodeResult encodedHeadersResult = NetworkHeaderHelper.processRequestHeaders(mteHelper,
@@ -78,7 +78,9 @@ public class FileUploadHelper {
         httpConn.setRequestProperty("x-mte-relay", RelayOptions.formatMteRelayHeader(properties.relayOptions));
         outputStream = httpConn.getOutputStream();
     }
+    // endregion
 
+    // region Public Methods
     public void encryptAndSend(StoreStatesCallback callback) throws IOException {
 
         // Start by calling StartEncrypt
@@ -113,6 +115,31 @@ public class FileUploadHelper {
         getResponse(callback);
         pipedOutputStream.close(); // Closes the pipedInputStream too.
         outputStream.close();
+    }
+    // endregion
+
+    // region Private Methods
+    private int getContentLengthHeader(Map<String, String> origHeaders) {
+        String contentLengthValue = null;
+
+    // Case-insensitive search for "Content-Length"
+        for (Map.Entry<String, String> entry : origHeaders.entrySet()) {
+            if (entry.getKey().equalsIgnoreCase("Content-Length")) {
+                contentLengthValue = entry.getValue();
+                break;
+            }
+        }
+
+    // Parse the value if found, otherwise, handle the error
+        int origContentLength = 0;
+        if (contentLengthValue != null) {
+            try {
+                origContentLength = Integer.parseInt(contentLengthValue);
+            } catch (NumberFormatException e) {
+                throw new RelayException("FileUploadHelper", "Invalid Content-Length value: '" + contentLengthValue + "'");
+            }
+        }
+        return origContentLength;
     }
 
     private Thread encryptStream() {
@@ -154,40 +181,39 @@ public class FileUploadHelper {
         return mteHelper.getEncryptFinishBytes();
     }
 
-    public void getResponse(StoreStatesCallback callback) throws IOException, MteException {
+    private void getResponse(StoreStatesCallback callback) throws IOException, MteException {
 
         int status = httpConn.getResponseCode();
         Map<String, List<String>> processedHeaders = Collections.emptyMap();
 
         if (status == HttpURLConnection.HTTP_OK) {
             try {
-            RelayOptions responseRelayOptions = NetworkHeaderHelper.getRelayHeaderValues(httpConn);
-            String responsePairId = responseRelayOptions.pairId;
-            processedHeaders = NetworkHeaderHelper.processHttpConnResponseHeaders(httpConn,
-                    mteHelper,
-                    responsePairId);
-            InputStream inputStream = httpConn.getInputStream();
-            StringBuilder sb = new StringBuilder();
-            byte[] buffer = new byte[1024];
-            mteHelper.startDecrypt(responsePairId);
-            int bytesRead;
-            String charset = "UTF-8";
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                byte[] decrypted = new byte[bytesRead];
-                int bytesDecrypted = mteHelper.decryptChunk(responsePairId,
-                        buffer,
-                        0,
-                        bytesRead,
-                        decrypted,
-                        0);
-                sb.append(new String(decrypted, charset), 0, bytesDecrypted);
-            }
-            DecodeResult finishEncryptResult = mteHelper.finishDecrypt(responsePairId);
-            if (finishEncryptResult.decodedBytes != null &&
-                    finishEncryptResult.decodedBytes.length > 0) {
-                sb.append(new String(finishEncryptResult.decodedBytes, charset));
-            }
-//            try {
+                RelayOptions responseRelayOptions = NetworkHeaderHelper.getRelayHeaderValues(httpConn);
+                String responsePairId = responseRelayOptions.pairId;
+                processedHeaders = NetworkHeaderHelper.processHttpConnResponseHeaders(httpConn,
+                        mteHelper,
+                        responsePairId);
+                InputStream inputStream = httpConn.getInputStream();
+                StringBuilder sb = new StringBuilder();
+                byte[] buffer = new byte[1024];
+                mteHelper.startDecrypt(responsePairId);
+                int bytesRead;
+                String charset = "UTF-8";
+                while ((bytesRead = inputStream.read(buffer)) != -1) {
+                    byte[] decrypted = new byte[bytesRead];
+                    int bytesDecrypted = mteHelper.decryptChunk(responsePairId,
+                            buffer,
+                            0,
+                            bytesRead,
+                            decrypted,
+                            0);
+                    sb.append(new String(decrypted, charset), 0, bytesDecrypted);
+                }
+                DecodeResult finishEncryptResult = mteHelper.finishDecrypt(responsePairId);
+                if (finishEncryptResult.decodedBytes != null &&
+                        finishEncryptResult.decodedBytes.length > 0) {
+                    sb.append(new String(finishEncryptResult.decodedBytes, charset));
+                }
                 listener.relayStreamResponse(
                         true,
                         sb.toString(),
@@ -206,7 +232,9 @@ public class FileUploadHelper {
                     processedHeaders);
         }
     }
+    // endregion
 
+    // region Static Methods
     static String getRandomStr(Integer length) {
         String AlphaNumericString = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvxyz23456789";
         StringBuilder sb = new StringBuilder(length);
@@ -219,4 +247,5 @@ public class FileUploadHelper {
         }
         return sb.toString();
     }
+    // endregion
 }
