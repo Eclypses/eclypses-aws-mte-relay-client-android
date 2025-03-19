@@ -31,7 +31,7 @@ import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -50,7 +50,7 @@ public class FileUploadHelper {
     private PipedInputStream pipedInputStream;
     // endregion
 
-    // region Constructors
+    // region Constructor
     public FileUploadHelper(RelayFileUploadProperties properties,
                             RelayStreamResponseListener listener,
                             RelayStreamCompletionCallback completionCallback)
@@ -63,19 +63,22 @@ public class FileUploadHelper {
         this.listener = listener;
         origContentLength = getContentLengthHeader(properties.origHeaders);
         int relayContentLength = origContentLength + getEncryptFinishBytes();
-
+        Map<String, String> origHeaders = properties.origHeaders;
         EncodeResult encodedHeadersResult = NetworkHeaderHelper.processRequestHeaders(mteHelper,
                 pairId,
                 properties.headersToEncrypt,
-                properties.origHeaders);
-
+                origHeaders);
         httpConn = (HttpURLConnection) url.openConnection();
         httpConn.setUseCaches(false);
         httpConn.setDoOutput(true); // indicates POST method
         httpConn.setDoInput(true);
+        for (Map.Entry<String, String> entry : origHeaders.entrySet()) {
+            httpConn.setRequestProperty(entry.getKey(), entry.getValue());
+        }
         httpConn.setRequestProperty("Content-Length", String.valueOf(relayContentLength));
         httpConn.setRequestProperty("x-mte-relay-eh", encodedHeadersResult.encodedStr);
         httpConn.setRequestProperty("x-mte-relay", RelayOptions.formatMteRelayHeader(properties.relayOptions));
+
         outputStream = httpConn.getOutputStream();
     }
     // endregion
@@ -122,7 +125,6 @@ public class FileUploadHelper {
     private int getContentLengthHeader(Map<String, String> origHeaders) {
         String contentLengthValue = null;
 
-    // Case-insensitive search for "Content-Length"
         for (Map.Entry<String, String> entry : origHeaders.entrySet()) {
             if (entry.getKey().equalsIgnoreCase("Content-Length")) {
                 contentLengthValue = entry.getValue();
@@ -130,7 +132,6 @@ public class FileUploadHelper {
             }
         }
 
-    // Parse the value if found, otherwise, handle the error
         int origContentLength = 0;
         if (contentLengthValue != null) {
             try {
@@ -184,15 +185,17 @@ public class FileUploadHelper {
     private void getResponse(StoreStatesCallback callback) throws IOException, MteException {
 
         int status = httpConn.getResponseCode();
-        Map<String, List<String>> processedHeaders = Collections.emptyMap();
+        Map<String, List<String>> processedHeaders = new HashMap<>();
 
         if (status == HttpURLConnection.HTTP_OK) {
             try {
                 RelayOptions responseRelayOptions = NetworkHeaderHelper.getRelayHeaderValues(httpConn);
                 String responsePairId = responseRelayOptions.pairId;
-                processedHeaders = NetworkHeaderHelper.processHttpConnResponseHeaders(httpConn,
-                        mteHelper,
-                        responsePairId);
+
+                processedHeaders = new HashMap<>(httpConn.getHeaderFields());
+                String ehHeader = httpConn.getHeaderField(Constants.X_MTE_RELAY_EH_KEY);
+                NetworkHeaderHelper.processResponseHeaders(mteHelper, responsePairId, processedHeaders, ehHeader);
+
                 InputStream inputStream = httpConn.getInputStream();
                 StringBuilder sb = new StringBuilder();
                 byte[] buffer = new byte[1024];

@@ -27,6 +27,8 @@ package com.mte.relay;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.Map;
+
 public class RelayConnectionModel {
     String url;
     int method;
@@ -34,7 +36,7 @@ public class RelayConnectionModel {
     JSONObject jsonPayload;
     JSONArray jsonArrayPayload;
     byte[] bytesPayload;
-    String encryptedHeaders;
+    Map<String, String> origHeaders;
     RelayHeaders relayHeaders;
     RelayOptions relayOptions;
 
@@ -44,7 +46,7 @@ public class RelayConnectionModel {
                                 JSONObject jsonPayload,
                                 JSONArray jsonArrayPayload,
                                 byte[] bytesPayload,
-                                String encryptedHeaders,
+                                Map<String, String> origHeaders,
                                 RelayHeaders relayHeaders,
                                 RelayOptions relayOptions) {
         this.url = url;
@@ -53,7 +55,7 @@ public class RelayConnectionModel {
         this.jsonPayload = jsonPayload;
         this.jsonArrayPayload = jsonArrayPayload;
         this.bytesPayload = bytesPayload;
-        this.encryptedHeaders = encryptedHeaders;
+        this.origHeaders = origHeaders;
         this.relayHeaders = relayHeaders;
         this.relayOptions = relayOptions;
     }

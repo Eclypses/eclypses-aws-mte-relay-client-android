@@ -27,6 +27,7 @@ package com.mte.relay;
 import android.content.Context;
 
 import com.android.volley.AuthFailureError;
+import com.android.volley.Header;
 import com.android.volley.Request;
 
 import org.json.JSONArray;
@@ -40,6 +41,8 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -266,7 +269,7 @@ public class Host {
                 null,
                 null,
                 null,
-                "",
+                null,
                 new RelayHeaders(),
                 setRelayOptions(true, null)
         );
@@ -429,10 +432,17 @@ public class Host {
         } catch (MalformedURLException e) {
             listener.onError(e.getMessage(), null);
         }
+        Map<String, String> origHeaders;
+        try {
+            origHeaders = origRequest.getHeaders();
+        } catch (Exception e) {
+            origHeaders = new HashMap<>();
+        }
 
-        // Encrypt the route and inject the pathnamePrefix if it exists
+
+        // Encrypt the route
         EncodeResult encryptedRouteResult = encryptRoute(origRoute);
-        EncodeResult encryptHeadersResult = encryptHeaders(encryptedRouteResult.pairId, origRequest, headersToEncrypt, listener);
+        EncodeResult encryptHeadersResult = NetworkHeaderHelper.processRequestHeaders(mteHelper, encryptedRouteResult.pairId, headersToEncrypt, origHeaders);
         EncodeResult encryptBodyBytesResult = encryptBodyBytes(encryptHeadersResult.pairId, origRequest, listener);
         byte[] encryptedBodyBytes = encryptBodyBytesResult.encodedBytes != null ? encryptBodyBytesResult.encodedBytes : null;
 
@@ -443,7 +453,7 @@ public class Host {
                 null,
                 null,
                 encryptedBodyBytes,
-                "",
+                origHeaders,
                 new RelayHeaders(hostClientId,
                         encryptBodyBytesResult.pairId,
                         "MKE",
@@ -465,10 +475,13 @@ public class Host {
                         reSendRequest(origRequest, headersToEncrypt, listener);
                     }
                 });
-                Map<String, List<String>> responseHeaders = null;
+                Map<String, List<String>> processedHeaders = new HashMap<>();
                 String responseString = "Status Code: " + code + " ";
                 try {
-                    responseHeaders = NetworkHeaderHelper.processVolleyResponseHeaders(relayHeaders, mteHelper);
+                    for (Header header : relayHeaders.responseHeaderList) {
+                        processedHeaders.put(header.getName(), Collections.singletonList(header.getValue()));
+                    }
+                    NetworkHeaderHelper.processResponseHeaders(mteHelper, relayHeaders.pairId, processedHeaders, relayHeaders.encryptedDecryptedHeaders);
                     DecodeResult bodyDecodeResult;
                     if (data != null &&
                             data.length != 0 &&
@@ -483,10 +496,10 @@ public class Host {
                             responseString = responseString + e.getMessage();
                         }
                     }
-                } catch (IOException | MteException e) {
+                } catch (MteException e) {
                     responseString = responseString + e.getMessage();
                 }
-                listener.onError(responseString, responseHeaders);
+                listener.onError(responseString, processedHeaders);
             }
 
             @Override
@@ -501,11 +514,14 @@ public class Host {
 
             @Override
             public void onByteArrayResponse(byte[] byteArrayResponse, RelayHeaders relayHeaders) {
-                Map<String, List<String>> responseHeaders = null;
+                Map<String, List<String>> processedHeaders = new HashMap<>();
                 try {
-                    responseHeaders = NetworkHeaderHelper.processVolleyResponseHeaders(relayHeaders, mteHelper);
-                } catch (IOException | MteException e) {
-                    listener.onError(e.getMessage(), responseHeaders);
+                    for (Header header : relayHeaders.responseHeaderList) {
+                        processedHeaders.put(header.getName(), Collections.singletonList(header.getValue()));
+                    }
+                    NetworkHeaderHelper.processResponseHeaders(mteHelper, relayHeaders.pairId, processedHeaders, relayHeaders.encryptedDecryptedHeaders);
+                } catch (MteException e) {
+                    listener.onError(e.getMessage(), processedHeaders);
                 }
                 if (byteArrayResponse != null) {
                     DecodeResult bodyDecodeResult = mteHelper.decode(relayHeaders.pairId, byteArrayResponse);
@@ -515,11 +531,12 @@ public class Host {
                         listener.onError(e.getMessage(), null);
                     }
                     rePairAttempts = 1;
-                    listener.onResponse(bodyDecodeResult.decodedBytes, responseHeaders);
+                    listener.onResponse(bodyDecodeResult.decodedBytes, processedHeaders);
                 }
             }
         });
     }
+
     private <T> void reSendRequest(Request<T> req, String[] headersToEncrypt, RelayDataTaskListener listener) {
         Thread sendingTread = new Thread(() -> {
             try {
@@ -552,16 +569,6 @@ public class Host {
         // Add the "/" back onto the UrlEncodedRoute
         encryptedRouteResult.encodedStr = "/" + urlEncodedRoute;
         return encryptedRouteResult;
-    }
-
-    private EncodeResult encryptHeaders(String pairId, Request origRequest, String[] headersToEncrypt, RelayDataTaskListener listener) {
-        EncodeResult encodeResult = null;
-        try {
-            encodeResult = NetworkHeaderHelper.processRequestHeaders(mteHelper, pairId, headersToEncrypt, origRequest.getHeaders());
-        } catch (AuthFailureError e) {
-            listener.onError(e.getMessage(),null);
-        }
-        return encodeResult;
     }
 
     private EncodeResult encryptBodyBytes(String pairId, Request origRequest, RelayDataTaskListener listener) {

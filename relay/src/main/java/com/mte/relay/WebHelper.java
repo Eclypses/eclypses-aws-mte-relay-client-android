@@ -25,10 +25,8 @@
 package com.mte.relay;
 
 import android.content.Context;
-import android.util.Log;
 
 import com.android.volley.AuthFailureError;
-import com.android.volley.BuildConfig;
 import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Header;
 import com.android.volley.NetworkResponse;
@@ -44,19 +42,19 @@ import com.android.volley.toolbox.Volley;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 public class WebHelper {
+
+    // region Class Variables
     public static WebHelper instance;
     private static Context ctx;
     private RequestQueue requestQueue;
+    // endregion
 
+    // region Constructors
     public static WebHelper getInstance(Context ctx) {
         if (instance == null) {
             instance = new WebHelper(ctx);
@@ -68,7 +66,9 @@ public class WebHelper {
         WebHelper.ctx = ctx;
         requestQueue = getRequestQueue();
     }
+    // endregion
 
+    // region Public Methods
     public <T> void addToRequestQueue(Request<T> req) {
         getRequestQueue().add(req);
     }
@@ -184,7 +184,9 @@ public class WebHelper {
                 DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
         addToRequestQueue(relayRequest);
     }
+    // endregion
 
+    // region Private Methods
     private void processResponseError(VolleyError error, RelayHeaders responseHeaders, RWHResponseListener listener) {
         if (error == null) {
            return;
@@ -208,7 +210,7 @@ public class WebHelper {
 
     private Map<String, String> processRequestHeaders(RelayConnectionModel connectionModel,
                                                       Request origRequest,
-                                                      String contentType) throws AuthFailureError {
+                                                      String contentType) {
         Map<String, String> params = new HashMap<>();
         params.put(Constants.CONTENT_TYPE_KEY, contentType);
         params.put(Constants.X_MTE_RELAY_KEY, RelayOptions.formatMteRelayHeader(connectionModel.relayOptions));
@@ -216,8 +218,7 @@ public class WebHelper {
 
         // Add the rest of the headers from the original request if it's not null
         if (origRequest != null) {
-            Map<String, String> headers = origRequest.getHeaders();
-            for (Map.Entry<String, String> header : headers.entrySet())
+            for (Map.Entry<String, String> header : connectionModel.origHeaders.entrySet())
                 if (!Objects.equals(header.getKey(), Constants.CONTENT_TYPE_KEY)) {
                     params.put(header.getKey(), header.getValue());
                 }
@@ -256,5 +257,5 @@ public class WebHelper {
                 responseHeaders.encryptedDecryptedHeaders,
                 responseHeaders.responseHeaderList);
     }
-
+    // endregion
 }
