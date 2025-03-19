@@ -234,18 +234,6 @@ public class Relay {
         return responseMessage;
     }
 
-    private void setStreamChunkSize(int newSize) {
-        RelaySettings.streamChunkSize = newSize;
-    }
-
-    private void setPairPoolSize(int newSize) {
-        RelaySettings.pairPoolSize = newSize;
-    }
-
-    private void setPersistPairs(boolean bool) {
-        RelaySettings.persistPairs = bool;
-    }
-
     public String[] getHostList() {
         return pairedHosts.keySet().toArray(new String[0]);
     }
@@ -282,6 +270,18 @@ public class Relay {
 
     private boolean getPersistPairsSetting() {
         return RelaySettings.persistPairs;
+    }
+
+    private void setStreamChunkSize(int newSize) {
+        RelaySettings.streamChunkSize = newSize;
+    }
+
+    private void setPairPoolSize(int newSize) {
+        RelaySettings.pairPoolSize = newSize;
+    }
+
+    private void setPersistPairs(boolean bool) {
+        RelaySettings.persistPairs = bool;
     }
     // endregion
 

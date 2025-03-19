@@ -36,47 +36,58 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class FileDownloadHelper {
-
+    // region  Class Variables
     private final HttpURLConnection httpConn;
     private final MteHelper mteHelper;
-    private final String pairId;
     private String responsePairId;
     private final String downloadPath;
     private final RelayStreamResponseListener listener;
+    // endregion
 
+    // region Constructor
     public FileDownloadHelper(FileDownloadProperties properties, RelayStreamResponseListener listener) throws IOException {
 
-        this.pairId = properties.relayOptions.pairId;
+        String pairId = properties.relayOptions.pairId;
         this.mteHelper = properties.mteHelper;
         this.downloadPath = properties.downloadPath;
         this.listener = listener;
 
         URL url = new URL(properties.hostUrl + properties.route);
-        EncodeResult encodedHeadersResult = encodeHeaders(properties.headersToEncrypt, properties.origHeaders);
+        Map<String, String> origHeaders = properties.origHeaders;
+        EncodeResult encodedHeadersResult = NetworkHeaderHelper.processRequestHeaders(mteHelper,
+                pairId,
+                properties.headersToEncrypt,
+                origHeaders);
         httpConn = (HttpURLConnection) url.openConnection();
         httpConn.setUseCaches(false);
         httpConn.setDoOutput(false); // indicates GET method
         httpConn.setDoInput(true);
+        for (Map.Entry<String, String> entry : origHeaders.entrySet()) {
+            httpConn.setRequestProperty(entry.getKey(), entry.getValue());
+        }
         httpConn.setRequestProperty("x-mte-relay-eh", encodedHeadersResult.encodedStr);
         httpConn.setRequestProperty("x-mte-relay", RelayOptions.formatMteRelayHeader(properties.relayOptions));
     }
+    // endregion
 
+    // region Public Methods
     public void downloadFile(StoreStatesCallback callback) {
         Thread networkThread = new Thread(() -> {
-            Map<String, List<String>> processedHeaders = Collections.emptyMap();
+            Map<String, List<String>> processedHeaders = new HashMap<>();
             try {
                 if (httpConn.getResponseCode() == HttpURLConnection.HTTP_OK) {
                     RelayOptions responseRelayOptions = NetworkHeaderHelper.getRelayHeaderValues(httpConn);
                     responsePairId = responseRelayOptions.pairId;
-                    processedHeaders = NetworkHeaderHelper.processHttpConnResponseHeaders(httpConn,
-                            mteHelper,
-                            responsePairId);
+
+                    processedHeaders = new HashMap<>(httpConn.getHeaderFields());
+                    String ehHeader = httpConn.getHeaderField(Constants.X_MTE_RELAY_EH_KEY);
+                    NetworkHeaderHelper.processResponseHeaders(mteHelper, responsePairId, processedHeaders, ehHeader);
+
                     processFileDownloadStream(downloadPath);
 
                     JSONObject jsonResponse = getJsonResponse(downloadPath);
@@ -106,7 +117,9 @@ public class FileDownloadHelper {
         });
         networkThread.start();
     }
+    // endregion
 
+    // region Private Methods
     private void processFileDownloadStream(String downloadPath) throws IOException {
         InputStream inputStream = httpConn.getInputStream();
         FileOutputStream outputStream = new FileOutputStream(downloadPath);
@@ -133,24 +146,5 @@ public class FileDownloadHelper {
         jsonResponse.put("Download Location", downloadPath);
         return jsonResponse;
     }
-
-    private EncodeResult encodeHeaders(String[] headersToEncode, Map<String, String> origHeaders) {
-        Map<String, String> ctHeader = new HashMap<>();
-
-        // encode original headers as necessary
-        List<String> headersToEncodeList = Arrays.asList(headersToEncode);
-        for (Map.Entry<String, String> origHeader : origHeaders.entrySet()) {
-            if (headersToEncodeList.contains(origHeader.getKey())) {
-                ctHeader.put(origHeader.getKey(), origHeader.getValue());
-            }
-        }
-
-        // Remove headers to be encoded from Original Headers Map
-        for (Map.Entry<String, String> headerToEncode : ctHeader.entrySet()) {
-            origHeaders.remove(headerToEncode.getKey());
-        }
-
-        JSONObject headersJson = new JSONObject(ctHeader);
-        return mteHelper.encode(pairId, headersJson.toString());
-    }
+    // endregion
 }
