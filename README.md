@@ -3,7 +3,7 @@
 </center>
 
 <div align="center" style="font-size:40pt; font-weight:900; font-family:arial; margin-top:50px;" >
-Android Java MteRelay Library for Amazon Web Services</div>
+Android Java MteRelay Library</div>
 <br><br><br>
 
 # Introduction 
@@ -11,7 +11,7 @@ This AAR library provides the Java language Eclypses MteRelay Client library.
 
 - This guide assumes a working knowledge of including an AAR library (either from a local directory on your computer or directly from Maven Central) in your Android project. [HowTo](https://developer.android.com/build/dependencies#groovy)
 -	The simplest way to use the library is to list it as a dependency for your app (Module build.gradle / Dependencies). Add 'implementation 'com.eclypses:eclypses-aws-mte-relay-client-android-release:x.x.x' and confirm that MavenCentral is one of your listed repositories.
-- Alternatively, you can add a 'libs' directory to the same level as the src directory n your app, then download the Relay Library from https://github.com/Eclypses/eclypses-aws-mte-relay-client-android.git and compile it. Add the resulting .aar (eclypses-aws-mte-relay-client-android-release-3.4.9-release.aar) to the libs dir you just created and add - implementation files('libs/eclypses-aws-mte-relay-client-android-release-3.4.9-release.aar') - line to your module build.gradle file's dependancies block.
+- Alternatively, you can add a 'libs' directory to the same level as the src directory n your app, then download the Relay Library from https://github.com/Eclypses/eclypses-aws-mte-relay-client-android.git and compile it. Add the resulting .aar (eclypses-aws-mte-relay-client-android-release-x.x.x-release.aar) to the libs dir you just created and add - implementation files('libs/eclypses-aws-mte-relay-client-android-release-x.x.x-release.aar') - line to your module build.gradle file's dependancies block.
 
 
 <br><br>
@@ -22,22 +22,17 @@ This AAR library provides the Java language Eclypses MteRelay Client library.
    - Create a class variable for the relay singleton. 
    <br><br>
    ``` java
-   private static Relay relay;
+   Relay relay;
 
    ```
    - Then, in the constructor for that class, instantiate the Relay class, passing ...
       -  the context,
       - and a new instance of InstantiateRelayCallback.
    ``` java
-   relay = Relay.getInstance(ctx, new InstantiateRelayCallback() {
+   relay = Relay.getInstance(ctx, new RelayResponseListener() {
       @Override
-      public void onError(String message) {
-         // handle instantiate errors appropriately
-      }
-
-      @Override
-      public void relayInstantiated() {
-         // any code to run after Relay is instantiated
+      public void onCompletion(boolean success, String message) {
+         // handle callback appropriately
       }
    });
    ```
@@ -49,12 +44,18 @@ This AAR library provides the Java language Eclypses MteRelay Client library.
 - Then, after creating your Volley request, instead of calling `RequestSingleton.getInstance(context).addToRequestQueue(request);`, call relay.addToMteRequestQueue(), passing ...
    - the request object, 
    - a String[] of the names of any http headers you wish to have protected by Mte, 
-   - and a new RelayResponseListener.
+   - and a new RelayDataTaskListener.
+- Optionally,  pathnamePrefix, if required by your infrastructure.
    <br><br>
 ``` java
 String[] headersToEncrypt = new String[] {"Content-Length"};
 
-relay.addToMteRequestQueue(request, headersToEncrypt, new RelayResponseListener() {
+// Without pathnamePrefix
+relay.addToMteRequestQueue(request, headersToEncrypt, new RelayDataTaskListener() {
+
+// With pathnamePrefix
+String pathnamePrefix = "<your-pathname-prefix>";
+relay.addToMteRequestQueue(request, headersToEncrypt, pathnamePrefix, new RelayDataTaskListener() {
    @Override
    public void onError(String message, Map<String, List<String>> responseHeaders) {
       // Handle errors appropriately and response headers as necessary
@@ -89,24 +90,18 @@ RelayFileRequestProperties reqProperties = new RelayFileRequestProperties(
 - Then, call relay.uploadFile, passing ...
    - the RelayFileRequestProperties object you just created'
    - the route portion of the url you are uploading to,
-   - a new instance of RelayResponseListener.
+   - optionally, pathnamePrefix, if required by your infrastructure
+   - an instance of RelayStreamResponseListener, // returns response and headers
+   - an instance of RelayStreamCompletionCallback. // provides upload progress updates
    <br><br>
 ``` java
-relay.uploadFile(AppSettings.relayHosts[0], reqProperties, route, new RelayResponseListener() {
+relay.uploadFile(AppSettings.relayHosts[0], reqProperties, route, <optional pathnamePrefix>, new RelayStreamResponseListener() {
    @Override
-   public void onError(String message, Map<String, List<String>> responseHeaders) {
-      // Handle errors appropriately and response headers as necessary
-   }
-
-   @Override
-   public void onResponse(byte[] responseBytes, Map<String, List<String>> responseHeaders) {
-      // We don't expect to receive the response as a byte[].
-   }
-
-   @Override
-   public void onResponse(JSONObject responseJson, Map<String, List<String>> responseHeaders) {
-   // Returns returns the response body as a JSONObject, and the response headers as a Map 
-      });
+   public relayStreamResponse(boolean success, 
+                              String message, 
+                              String errorMessage, 
+                              Map<String, List<String>> responseHeaders); {
+      // Handle response as necessary
    }
 });
 ```
@@ -143,33 +138,26 @@ relay.uploadFile(AppSettings.relayHosts[0], reqProperties, route, new RelayRespo
 - Create a new RelayFileRequestProperties object
 ``` java
  RelayFileRequestProperties reqProperties = new RelayFileRequestProperties(
-                        // Name of the file to download,
                         // Server path ("https://myRelayServer.com")
-                        // route portion of download Url with preceding '/' removed,
+                        // route portion of download Url,
                         // path of location where you want to store the downloaded file,
                         // request headers for this request as a Map<String, String>,
                         // String[] of header names to protect with Mte
 ```
 - Then call relay.downloadFile, passing ...
    - the RelayFileRequestProperties object you just created'
+   - optionally, a pathnamePrefix, if required by your infrastructure
    - a new instance of RelayResponseListener
  <br><br>
 
 ``` java
-relay.downloadFile(AppSettings.relayHosts[0], reqProperties, new RelayResponseListener() {
+relay.downloadFile(AppSettings.relayHosts[0], reqProperties, <optional pathnamePrefix>, new RelaystreamResponseListener() {
    @Override
-   public void onError(String message, Map<String, List<String>> responseHeaders) {
-      // Handle errors appropriately and response headers as necessary
-   }
-
-   @Override
-   public void onResponse(byte[] responseBytes, Map<String, List<String>> responseHeaders) {
-      // We don't expect to receive the response as a byte[].
-   }
-
-   @Override
-   public void onResponse(JSONObject responseJson, Map<String, List<String>> responseHeaders) {
-   // Returns returns a JSONObject, and the response headers as a Map
+   public relayStreamResponse(boolean success, 
+                              String message, 
+                              String errorMessage, 
+                              Map<String, List<String>> responseHeaders); {
+      // Handle response as necessary
    }
 });
 ```
@@ -179,29 +167,37 @@ relay.downloadFile(AppSettings.relayHosts[0], reqProperties, new RelayResponseLi
 - Most situations where Client and Server get out of sync are handled automatically but a function is available to trigger a rePair attempt.
 - Call 'relay.rePairWithRelayServer' passing ...
    - the path of the server with which you wish to rePair (https://myRelayServer.com),
+    - Optionally, pathnamePrefix, if required by your infrastructure
    - and a new instance of RelayResponseListener
 <br><br>
 
 ``` java
-relay.rePairWithRelayServer(relayServerPath, new RelayResponseListener() {
-   @Override
-   public void onError(String message, Map<String, List<String>> responseHeaders) {
-         // Handle errors appropriately and response headers as necessary
-   }
-
-   @Override
-   public void onResponse(byte[] bytes, Map<String, List<String>> responseHeaders) {
-         // We don't expect to receive the response as a byte[].
-   }
-
-   @Override
-   public void onResponse(JSONObject jsonObject, Map<String, List<String>> responseHeaders) {
-         // Returns returns a JSONObject, and the response headers as a Map
-   }
-});
+relay.rePairWithRelayServer(relayServerPath, <optional pathnamePrefix>);
+// Responses will be received via relayResponseListener parameter passed in Relay Instantiation
 ```
 
-### An AWS MteRelay Client YouTube integration video will soon be available.
+# Adjust Relay Settings as Necessary
+- The RelaySettings actor contains a few settings that can be edited at runtime via public functions as shown below. Each new Relay instantiation begins with the default values.Consequently, when adjustRelaySettings is called with new values different than the existing values, a rePair with the Relay Server is automatically called as well.
+
+
+``` java
+   - Sets the maximum number of streamed bytes processed in a single chunk. Processing often occurs on fewer bytes.
+int newStreamChunkSize = <newValue>; // Defaults to 1048576. Range 4096 (4KB) to 10485760 (10 MB)
+
+   - The Mobile Relay Client provides multiple pairs used in a round-robin fashion to facilitate high throughput without collisions.  
+int newPairPoolSize = <newValue>; // Defaults to 3. Range 1 to 10
+
+   - The Mobile Relay Client has the ability to persist pairing with server, even though client has been shut down. Default is false because a new pairing happens quickly at relay instantiation and removes the chance of the pairing having been corrupted. 
+boolean persistPair = true // Defaults to false on each Relay instantiation
+
+String result = relay.adjustRelaySettings(
+                AppSettings.relayHost,
+                pathnamePrefix, // (if required by your infrastructure)
+                newStreamChunkSize,
+                newPairPoolSize,
+                persistPairs);
+```
+
 <br><br>
 
 <div style="page-break-after: always; break-after: page;"></div>
