@@ -121,8 +121,6 @@ public class MteHelper {
         return decodeResult;
     }
 
-
-
     public DecodeResult decode(String pairId, byte[] encoded) throws MteException {
         DecodeResult decodeResult = new DecodeResult();
         checkPairId(getClass().getSimpleName(), pairId);
