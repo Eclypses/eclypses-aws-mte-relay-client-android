@@ -24,26 +24,24 @@
 
 package com.mte.relay;
 
-import java.io.File;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class RelayFileRequestProperties {
 
     // region Class Variables
-    public String serverPath;
+    public final String serverPath;
     public String route;
     public String downloadPath;
     public RelayStreamCallback relayStreamCallback;
 
-    public Map<String,String> origHeaders;
-    public String[] headersToEncrypt;
+    public final Map<String,String> origHeaders;
+    public final String[] headersToEncrypt;
     // endregion
 
     // region Constructors
-    // Constructor Required in calling app
+    // Constructor is required in calling app
     public RelayFileRequestProperties(String serverPath,
-                                      Map origHeaders,
+                                      Map<String,String> origHeaders,
                                       String[] headersToEncrypt,
                                       RelayStreamCallback relayStreamCallback) {
         this.serverPath = serverPath;
@@ -52,7 +50,7 @@ public class RelayFileRequestProperties {
         this.relayStreamCallback = relayStreamCallback;
     }
 
-    // Constructor Required in calling app
+    // Constructor is required in calling app
     public RelayFileRequestProperties(String serverPath,
                                       String route,
                                       String downloadPath,

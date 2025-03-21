@@ -28,8 +28,8 @@ class RelaySettings {
 
     static int streamChunkSize = 65536;
 //    static int downloadChunkSize = 65536;
-    static String licenseCompanyName = "Eclypses Inc";
-    static String licenseKey = "9eHOohOm/GwY01xbvNTL9B+1";
+    static final String licenseCompanyName = "Eclypses Inc";
+    static final String licenseKey = "9eHOohOm/GwY01xbvNTL9B+1";
     static boolean persistPairs = false;
     static int pairPoolSize = 3;
 

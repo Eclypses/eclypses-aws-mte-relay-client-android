@@ -40,6 +40,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
@@ -50,8 +51,9 @@ public class Host {
 
     // region Class Variables
     boolean hostPaired = false;
-    Context ctx;
-    String hostUrl, hostUrlB64;
+    final Context ctx;
+    final String hostUrl;
+    final String hostUrlB64;
     private HostStorageHelper hostStorageHelper;
     private final MteHelper mteHelper;
     private final WebHelper webHelper;
@@ -105,7 +107,7 @@ public class Host {
     // endregion
 
     // region Retry Callbacks
-    RetryUploadCallback retryUploadCallback = (code, listener) -> {
+    final RetryUploadCallback retryUploadCallback = (code, listener) -> {
         if (code == 200) {
             prevUploadData = null;
         }
@@ -124,7 +126,7 @@ public class Host {
         }
     };
 
-    RetryDownloadCallback retryDownloadCallback = (code, listener) -> {
+    final RetryDownloadCallback retryDownloadCallback = (code, listener) -> {
         if (code == 200) {
             prevDownloadData = null;
         }
@@ -323,7 +325,7 @@ public class Host {
                         null),
                 setRelayOptions(encryptedBodyBytes != null,
                         encryptedRouteResult.pairId));
-        webHelper.sendBytes(relayConnectionModel, (Request<byte[]>) origRequest, new RWHResponseListener() {
+        webHelper.sendBytes(relayConnectionModel, origRequest, new RWHResponseListener() {
             @Override
             public void onError(int code, byte[] data, RelayHeaders relayHeaders) {
                 if (NetworkUtils.shouldRePairWithHost(code, prevRequestData)) {
@@ -470,7 +472,7 @@ public class Host {
 
             @Override
             public void onByteArrayResponse(byte[] byteArrayResponse, RelayHeaders relayHeaders) {
-                callback.onError("Unexpected Volley byteArrayResponse. Response: " + byteArrayResponse.toString());
+                callback.onError("Unexpected Volley byteArrayResponse. Response: " + Arrays.toString(byteArrayResponse));
             }
         });
     }
@@ -522,8 +524,7 @@ public class Host {
             public void onJsonArrayResponse(JSONArray response, RelayHeaders relayHeaders) {
                 hostClientId = relayHeaders.clientId;
 
-                boolean pairingComplete = true;
-                String errorMessage = "";
+                String errorMessage;
                 for (int i = 0; i < response.length(); i++) {
                     JSONObject pair;
                     String pairId;
@@ -539,8 +540,8 @@ public class Host {
                         currentPair.encNonce = Long.parseLong(pair.getString("decoderNonce"));
                         currentPair.decResponderEncryptedSecret = convertB64ToBytes(pair.getString("encoderSecret"));
                         currentPair.decNonce = Long.parseLong(pair.getString("encoderNonce"));
-                        pairMap.get(pairId).createEncoderAndDecoder();
-                    } catch (JSONException | MteException e) {;
+                        currentPair.createEncoderAndDecoder();
+                    } catch (JSONException | MteException e) {
                         callback.onError(e.getMessage());
                         return;
                     }
@@ -557,7 +558,7 @@ public class Host {
 
             @Override
             public void onByteArrayResponse(byte[] byteArrayResponse, RelayHeaders relayHeaders) {
-                callback.onError("Unexpected Volley jsonArrayResponse. Response: " + byteArrayResponse.toString());
+                callback.onError("Unexpected Volley jsonArrayResponse. Response: " + Arrays.toString(byteArrayResponse));
             }
         });
     }
@@ -639,21 +640,6 @@ public class Host {
         } else {
             return new EncodeResult(pairId, origBody);
         }
-    }
-
-    private void retryDownloadFile(RelayFileRequestProperties reqProperties, RelayStreamResponseListener listener) {
-        Thread sendingTread = new Thread(() -> {
-            try {
-                downloadFile(reqProperties, listener);
-            } catch (IOException e) {
-                listener.relayStreamResponse(
-                        false,
-                        null,
-                        "Exception: " + e.getMessage(),
-                        null);
-            }
-        });
-        sendingTread.start();
     }
 
     private byte[] convertB64ToBytes(String value) {

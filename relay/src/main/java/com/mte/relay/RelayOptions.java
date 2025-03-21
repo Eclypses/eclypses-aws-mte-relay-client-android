@@ -24,8 +24,6 @@
 
 package com.mte.relay;
 
-import android.util.Log;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -54,12 +52,12 @@ public class RelayOptions {
         return bodyIsEncoded;
     }
 
-    String clientId;
+    final String clientId;
     String pairId;
-    String encodeType;
-    Boolean urlIsEncoded;
-    Boolean headersAreEncoded;
-    Boolean bodyIsEncoded;
+    final String encodeType;
+    final Boolean urlIsEncoded;
+    final Boolean headersAreEncoded;
+    final Boolean bodyIsEncoded;
 
     public RelayOptions(String clientId,
                         String pairId,

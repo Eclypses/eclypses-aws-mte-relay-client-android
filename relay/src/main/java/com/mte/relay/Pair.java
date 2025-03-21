@@ -25,7 +25,6 @@
 package com.mte.relay;
 
 import android.util.Base64;
-import android.util.Log;
 
 import com.android.volley.BuildConfig;
 import com.eclypses.mte.MteKyber;
@@ -65,7 +64,9 @@ public class Pair {
         this.decoderState = Base64.decode(decoderState, Base64.DEFAULT);
     }
 
-    String pairId, encPersStr, decPersStr;
+    final String pairId;
+    String encPersStr;
+    String decPersStr;
     int publicKeySize, encryptedSize, secretSize;
     long encNonce, decNonce;
     MteKyber encMteKyber;

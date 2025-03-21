@@ -4,9 +4,9 @@ import java.io.IOException;
 
 public class PrevDownloadData implements RetryableRequestData {
 
-    Host host;
-    RelayFileRequestProperties reqProperties;
-    RelayStreamResponseListener listener;
+    final Host host;
+    final RelayFileRequestProperties reqProperties;
+    final RelayStreamResponseListener listener;
 
     public PrevDownloadData(Host host, RelayFileRequestProperties reqProperties, RelayStreamResponseListener listener) {
         this.host = host;

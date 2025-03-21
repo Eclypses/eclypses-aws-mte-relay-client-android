@@ -26,7 +26,6 @@ package com.mte.relay;
 
 import android.content.Context;
 
-import com.android.volley.AuthFailureError;
 import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Header;
 import com.android.volley.NetworkResponse;
@@ -49,21 +48,22 @@ import java.util.Objects;
 public class WebHelper {
 
     // region Class Variables
-    public static WebHelper instance;
-    private static Context ctx;
+    private static WebHelper instance;
+    private static Context appContext;
     private RequestQueue requestQueue;
     // endregion
 
     // region Constructors
-    public static WebHelper getInstance(Context ctx) {
+    public static WebHelper getInstance(Context context) {
         if (instance == null) {
-            instance = new WebHelper(ctx);
+            instance = new WebHelper(context.getApplicationContext());
         }
         return instance;
     }
 
-    public WebHelper(Context ctx) {
-        WebHelper.ctx = ctx;
+    // Private constructor to prevent direct instantiation
+    private WebHelper(Context context) {
+        appContext = context;
         requestQueue = getRequestQueue();
     }
     // endregion
@@ -75,14 +75,12 @@ public class WebHelper {
 
     public RequestQueue getRequestQueue() {
         if (requestQueue == null) {
-            // getApplicationContext() is key, it keeps you from leaking the
-            // Activity or BroadcastReceiver if someone passes one in.
-            requestQueue = Volley.newRequestQueue(ctx.getApplicationContext());
+            requestQueue = Volley.newRequestQueue(appContext);
         }
         return requestQueue;
     }
 
-    public void sendJson(RelayConnectionModel connectionModel, Request origRequest, RWHResponseListener listener) {
+    public <T> void sendJson(RelayConnectionModel connectionModel, Request<T> origRequest, RWHResponseListener listener) {
 
         RelayHeaders responseHeaders = new RelayHeaders();
         JsonObjectRequest request = new JsonObjectRequest(
@@ -91,11 +89,9 @@ public class WebHelper {
                 connectionModel.jsonPayload,
                 response -> listener.onJsonResponse(response,
                         createNewRelayResponseHeaders(responseHeaders)
-                ), error -> {
-                    processResponseError(error, responseHeaders, listener);
-        }) {
+                ), error -> processResponseError(error, responseHeaders, listener)) {
             @Override
-            public Map<String, String> getHeaders() throws AuthFailureError {
+            public Map<String, String> getHeaders() {
                 String contentType = "application/json; charset=utf-8";
                 return processRequestHeaders(connectionModel, origRequest, contentType);
             }
@@ -113,7 +109,7 @@ public class WebHelper {
         addToRequestQueue(request);
     }
 
-    public void sendJsonArray(RelayConnectionModel connectionModel, Request origRequest, RWHResponseListener listener) {
+    public <T> void sendJsonArray(RelayConnectionModel connectionModel, Request<T> origRequest, RWHResponseListener listener) {
         RelayHeaders responseHeaders = new RelayHeaders();
         JsonArrayRequest request = new JsonArrayRequest(
                 connectionModel.method,
@@ -121,12 +117,10 @@ public class WebHelper {
                 connectionModel.jsonArrayPayload,
                 response -> listener.onJsonArrayResponse(response,
                         createNewRelayResponseHeaders(responseHeaders)
-                ), error -> {
-            processResponseError(error, responseHeaders, listener);
-        }) {
+                ), error -> processResponseError(error, responseHeaders, listener)) {
 
             @Override
-            public Map<String, String> getHeaders() throws AuthFailureError {
+            public Map<String, String> getHeaders() {
                 String contentType = "application/json; charset=utf-8";
                 return processRequestHeaders(connectionModel, origRequest, contentType);
             }
@@ -144,14 +138,12 @@ public class WebHelper {
         addToRequestQueue(request);
     }
 
-    public void sendBytes(RelayConnectionModel connectionModel, Request<byte[]> origRequest, RWHResponseListener listener) {
+    public <T> void sendBytes(RelayConnectionModel connectionModel, Request<T> origRequest, RWHResponseListener listener) {
         RelayHeaders responseHeaders = new RelayHeaders();
         Request<byte[]> relayRequest = new Request<byte[]>(
                 connectionModel.method,
                 connectionModel.url + connectionModel.route,
-                error -> {
-                    processResponseError(error, responseHeaders, listener);
-                }) {
+                error -> processResponseError(error, responseHeaders, listener)) {
             @Override
             protected void deliverResponse(byte[] responseBytes) {
                 listener.onByteArrayResponse(responseBytes, responseHeaders);
@@ -163,7 +155,7 @@ public class WebHelper {
             }
 
             @Override
-            public Map<String, String> getHeaders() throws AuthFailureError {
+            public Map<String, String> getHeaders() {
                 String contentType = "application/octet-stream";
                 return processRequestHeaders(connectionModel, origRequest, contentType);
             }
@@ -208,8 +200,8 @@ public class WebHelper {
         }
     }
 
-    private Map<String, String> processRequestHeaders(RelayConnectionModel connectionModel,
-                                                      Request origRequest,
+    private <T> Map<String, String> processRequestHeaders(RelayConnectionModel connectionModel,
+                                                      Request<T> origRequest,
                                                       String contentType) {
         Map<String, String> params = new HashMap<>();
         params.put(Constants.CONTENT_TYPE_KEY, contentType);

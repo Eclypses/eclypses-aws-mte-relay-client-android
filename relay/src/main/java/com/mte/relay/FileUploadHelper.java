@@ -45,7 +45,7 @@ public class FileUploadHelper {
     private final RelayStreamResponseListener listener;
     private final RelayStreamCompletionCallback completionCallback;
     private final RetryUploadCallback retryUploadCallback;
-    private int origContentLength = 0;
+    private final int origContentLength;
     private final RelayStreamCallback relayStreamCallback;
     private PipedOutputStream pipedOutputStream;
     private PipedInputStream pipedInputStream;
@@ -242,18 +242,4 @@ public class FileUploadHelper {
     }
     // endregion
 
-    // region Static Methods
-    static String getRandomStr(Integer length) {
-        String AlphaNumericString = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvxyz23456789";
-        StringBuilder sb = new StringBuilder(length);
-        for (int i = 0; i < length; i++) {
-            int index
-                    = (int) (AlphaNumericString.length()
-                    * Math.random());
-            sb.append(AlphaNumericString
-                    .charAt(index));
-        }
-        return sb.toString();
-    }
-    // endregion
 }

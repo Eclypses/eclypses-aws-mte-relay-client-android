@@ -1,17 +1,16 @@
 package com.mte.relay;
 
-import java.io.File;
 import java.util.Map;
 
 public class RelayFileUploadProperties {
 
-    String hostUrl;
+    final String hostUrl;
     String route;
-    MteHelper mteHelper;
-    String[] headersToEncrypt;
-    Map<String,String> origHeaders;
-    RelayOptions relayOptions;
-    RelayStreamCallback relayStreamCallback;
+    final MteHelper mteHelper;
+    final String[] headersToEncrypt;
+    final Map<String,String> origHeaders;
+    final RelayOptions relayOptions;
+    final RelayStreamCallback relayStreamCallback;
 
     public RelayFileUploadProperties(String hostUrl,
                                      String route,

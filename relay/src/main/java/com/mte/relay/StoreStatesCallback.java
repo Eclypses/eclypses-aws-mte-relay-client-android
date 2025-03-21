@@ -1,6 +1,6 @@
 package com.mte.relay;
 
 
-interface StoreStatesCallback {
+public interface StoreStatesCallback {
     void onCallback();
 }

@@ -2,11 +2,11 @@ package com.mte.relay;
 
 public class PrevUploadData implements RetryableRequestData {
 
-    Host host;
-    RelayFileRequestProperties reqProperties;
-    String route;
-    RelayStreamResponseListener listener;
-    RelayStreamCompletionCallback completionCallback;
+    final Host host;
+    final RelayFileRequestProperties reqProperties;
+    final String route;
+    final RelayStreamResponseListener listener;
+    final RelayStreamCompletionCallback completionCallback;
 
     public PrevUploadData(Host host,
                           RelayFileRequestProperties reqProperties,

@@ -46,11 +46,12 @@
 
     public class HostStorageHelper {
 
-        Context ctx;
+        final Context ctx;
         SecretKey secretKey;
-        String  host, encryptedHostFilename;
+        final String  host;
+        final String encryptedHostFilename;
         boolean foundStoredHost = false;
-        Map<String, String> storedHosts = new HashMap<>(1);
+        final Map<String, String> storedHosts = new HashMap<>(1);
         boolean storageInstantiated = false;
         KeyHelper keyHelper;
 
