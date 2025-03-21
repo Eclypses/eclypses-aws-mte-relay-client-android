@@ -24,8 +24,6 @@
 
 package com.mte.relay;
 
-import android.util.Log;
-
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -131,19 +129,23 @@ public class FileDownloadHelper {
 
     // region Private Methods
     private void processFileDownloadStream(String downloadPath) throws IOException {
-        InputStream inputStream = httpConn.getInputStream();
-        FileOutputStream outputStream = new FileOutputStream(downloadPath);
-        byte[] buffer = new byte[RelaySettings.streamChunkSize];
-        int bytesRead;
-        mteHelper.startDecrypt(responsePairId);
-        while ((bytesRead = inputStream.read(buffer)) != -1) {
-            byte[] buf = Arrays.copyOfRange(buffer, 0, bytesRead);
-            DecodeResult decodeChunkResult = mteHelper.decryptChunk(responsePairId, buf);
-            outputStream.write(decodeChunkResult.decodedBytes, 0, decodeChunkResult.decodedBytes.length);
-        }
-        DecodeResult finishDecryptResult = mteHelper.finishDecrypt(responsePairId);
-        if (finishDecryptResult.decodedBytes != null && finishDecryptResult.decodedBytes.length > 0) {
-            outputStream.write(finishDecryptResult.decodedBytes, 0, finishDecryptResult.decodedBytes.length);
+        try (InputStream inputStream = httpConn.getInputStream();
+             FileOutputStream outputStream = new FileOutputStream(downloadPath)) {
+
+            byte[] buffer = new byte[RelaySettings.streamChunkSize];
+            int bytesRead;
+            mteHelper.startDecrypt(responsePairId);
+
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                byte[] buf = Arrays.copyOfRange(buffer, 0, bytesRead);
+                DecodeResult decodeChunkResult = mteHelper.decryptChunk(responsePairId, buf);
+                outputStream.write(decodeChunkResult.decodedBytes, 0, decodeChunkResult.decodedBytes.length);
+            }
+
+            DecodeResult finishDecryptResult = mteHelper.finishDecrypt(responsePairId);
+            if (finishDecryptResult.decodedBytes != null && finishDecryptResult.decodedBytes.length > 0) {
+                outputStream.write(finishDecryptResult.decodedBytes, 0, finishDecryptResult.decodedBytes.length);
+            }
         }
     }
 

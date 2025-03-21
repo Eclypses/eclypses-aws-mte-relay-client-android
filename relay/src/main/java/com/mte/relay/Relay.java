@@ -35,6 +35,7 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
+@SuppressWarnings("unused") // All public methods are called externally
 public class Relay {
 
     // region Class Variables
@@ -47,7 +48,7 @@ public class Relay {
     // region Constructors
     public static Relay getInstance(Context context, RelayResponseListener listener) {
         if (instance == null) {
-            instance = new Relay(context, listener);
+        instance = new Relay(context.getApplicationContext(), listener);
         }
         return instance;
     }
@@ -56,7 +57,7 @@ public class Relay {
         if (!MteBase.initLicense(RelaySettings.licenseCompanyName, RelaySettings.licenseKey)) {
             throw new RelayException(getClass().getSimpleName(), "MTE License Check Failed");
         }
-        ctx = context;
+        ctx = context.getApplicationContext();
         relayResponseListener = listener;
     }
     // endregion

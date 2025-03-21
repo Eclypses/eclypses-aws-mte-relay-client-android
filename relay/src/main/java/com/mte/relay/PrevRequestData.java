@@ -7,10 +7,10 @@ import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 
 public class PrevRequestData implements RetryableRequestData {
-    Host host;
-    Request<?> request;
-    String[] headersToEncrypt;
-    RelayDataTaskListener listener;
+    final Host host;
+    final Request<?> request;
+    final String[] headersToEncrypt;
+    final RelayDataTaskListener listener;
 
 
     public PrevRequestData(Host host, Request<?> request, String[] headersToEncrypt, RelayDataTaskListener listener) {

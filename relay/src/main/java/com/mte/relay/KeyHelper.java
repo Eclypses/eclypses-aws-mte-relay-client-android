@@ -89,10 +89,7 @@
         }
 
         public Boolean hasSecretKey() throws KeyStoreException {
-            if (keyStore.containsAlias(KEY_ALIAS)) {
-                return true;
-            }
-            return false;
+            return keyStore.containsAlias(KEY_ALIAS);
         }
 
         public SecretKey getSecretKey() {
