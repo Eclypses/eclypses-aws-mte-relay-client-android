@@ -30,6 +30,7 @@ import java.util.Map;
 
 public class RelayFileRequestProperties {
 
+    // region Class Variables
     public String serverPath;
     public String route;
     public String downloadPath;
@@ -37,7 +38,10 @@ public class RelayFileRequestProperties {
 
     public Map<String,String> origHeaders;
     public String[] headersToEncrypt;
+    // endregion
 
+    // region Constructors
+    // Constructor Required in calling app
     public RelayFileRequestProperties(String serverPath,
                                       Map origHeaders,
                                       String[] headersToEncrypt,
@@ -48,6 +52,7 @@ public class RelayFileRequestProperties {
         this.relayStreamCallback = relayStreamCallback;
     }
 
+    // Constructor Required in calling app
     public RelayFileRequestProperties(String serverPath,
                                       String route,
                                       String downloadPath,
@@ -59,4 +64,6 @@ public class RelayFileRequestProperties {
         this.origHeaders = origHeaders;
         this.headersToEncrypt = headersToEncrypt;
     }
+    // endregion
+
 }

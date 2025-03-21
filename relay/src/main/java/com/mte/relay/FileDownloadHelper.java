@@ -24,6 +24,8 @@
 
 package com.mte.relay;
 
+import android.util.Log;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -41,21 +43,26 @@ import java.util.List;
 import java.util.Map;
 
 public class FileDownloadHelper {
+
     // region  Class Variables
     private final HttpURLConnection httpConn;
     private final MteHelper mteHelper;
     private String responsePairId;
     private final String downloadPath;
     private final RelayStreamResponseListener listener;
+    private final RetryDownloadCallback retryDownloadCallback;
     // endregion
 
     // region Constructor
-    public FileDownloadHelper(FileDownloadProperties properties, RelayStreamResponseListener listener) throws IOException {
+    public FileDownloadHelper(FileDownloadProperties properties,
+                              RelayStreamResponseListener listener,
+                              RetryDownloadCallback retryDownloadCallback) throws IOException {
 
         String pairId = properties.relayOptions.pairId;
         this.mteHelper = properties.mteHelper;
         this.downloadPath = properties.downloadPath;
         this.listener = listener;
+        this.retryDownloadCallback = retryDownloadCallback;
 
         URL url = new URL(properties.hostUrl + properties.route);
         Map<String, String> origHeaders = properties.origHeaders;
@@ -80,7 +87,10 @@ public class FileDownloadHelper {
         Thread networkThread = new Thread(() -> {
             Map<String, List<String>> processedHeaders = new HashMap<>();
             try {
-                if (httpConn.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                int status = httpConn.getResponseCode();
+                retryDownloadCallback.onCompletion(status, listener);
+
+                if (status == HttpURLConnection.HTTP_OK) {
                     RelayOptions responseRelayOptions = NetworkHeaderHelper.getRelayHeaderValues(httpConn);
                     responsePairId = responseRelayOptions.pairId;
 
@@ -90,7 +100,7 @@ public class FileDownloadHelper {
 
                     processFileDownloadStream(downloadPath);
 
-                    JSONObject jsonResponse = getJsonResponse(downloadPath);
+                    JSONObject jsonResponse = createJsonResponse(downloadPath);
                     listener.relayStreamResponse(
                             true,
                             jsonResponse.toString(2),
@@ -137,7 +147,7 @@ public class FileDownloadHelper {
         }
     }
 
-    private JSONObject getJsonResponse(String downloadPath) throws JSONException, IOException {
+    private JSONObject createJsonResponse(String downloadPath) throws JSONException, IOException {
         Path path = FileSystems.getDefault().getPath(downloadPath);
         JSONObject jsonResponse = new JSONObject();
         jsonResponse.put("Response", httpConn.getResponseMessage());

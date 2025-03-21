@@ -44,6 +44,7 @@ public class FileUploadHelper {
     private final String pairId;
     private final RelayStreamResponseListener listener;
     private final RelayStreamCompletionCallback completionCallback;
+    private final RetryUploadCallback retryUploadCallback;
     private int origContentLength = 0;
     private final RelayStreamCallback relayStreamCallback;
     private PipedOutputStream pipedOutputStream;
@@ -53,7 +54,8 @@ public class FileUploadHelper {
     // region Constructor
     public FileUploadHelper(RelayFileUploadProperties properties,
                             RelayStreamResponseListener listener,
-                            RelayStreamCompletionCallback completionCallback)
+                            RelayStreamCompletionCallback completionCallback,
+                            RetryUploadCallback retryUploadCallback)
             throws IOException, RelayException {
         this.relayStreamCallback = properties.relayStreamCallback;
         this.completionCallback = completionCallback;
@@ -61,6 +63,7 @@ public class FileUploadHelper {
         this.mteHelper = properties.mteHelper;
         URL url = new URL(properties.hostUrl + properties.route);
         this.listener = listener;
+        this.retryUploadCallback = retryUploadCallback;
         origContentLength = getContentLengthHeader(properties.origHeaders);
         int relayContentLength = origContentLength + getEncryptFinishBytes();
         Map<String, String> origHeaders = properties.origHeaders;
@@ -184,8 +187,10 @@ public class FileUploadHelper {
 
     private void getResponse(StoreStatesCallback callback) throws IOException, MteException {
 
-        int status = httpConn.getResponseCode();
         Map<String, List<String>> processedHeaders = new HashMap<>();
+
+        int status = httpConn.getResponseCode();
+        retryUploadCallback.onCompletion(status, listener);
 
         if (status == HttpURLConnection.HTTP_OK) {
             try {
