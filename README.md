@@ -6,28 +6,60 @@
 Android Java MteRelay Library</div>
 <br><br><br>
 
+![Latest Release](https://img.shields.io/github/v/release/Eclypses/eclypses-aws-mte-relay-client-android?style=flat-square)
+
 # Introduction 
-This AAR library provides the Java language Eclypses MteRelay Client library.
+This AAR library provides the Java language Eclypses MteRelay Mobile Client library and requires licensed access to an MteRelay server instance to receive the secure transmission. [Info](https://eclypses.com/mte-technology/amazon-web-services-aws/)
+
+**Purpose of MteRelay:**
+- Securely relay HTTP requests to your server.
+- Protect sensitive headers and data with MTE encryption.
+- Stream large files efficiently.
 
 - This guide assumes a working knowledge of including an AAR library (either from a local directory on your computer or directly from Maven Central) in your Android project. [HowTo](https://developer.android.com/build/dependencies#groovy)
--	The simplest way to use the library is to list it as a dependency for your app (Module build.gradle / Dependencies). Add 'implementation 'com.eclypses:eclypses-aws-mte-relay-client-android-release:x.x.x' and confirm that MavenCentral is one of your listed repositories.
-- Alternatively, you can add a 'libs' directory to the same level as the src directory n your app, then download the Relay Library from https://github.com/Eclypses/eclypses-aws-mte-relay-client-android.git and compile it. Add the resulting .aar (eclypses-aws-mte-relay-client-android-release-x.x.x-release.aar) to the libs dir you just created and add - implementation files('libs/eclypses-aws-mte-relay-client-android-release-x.x.x-release.aar') - line to your module build.gradle file's dependancies block.
 
+## Installation
+### 1. Maven Central
+- Add the following line to your app's `build.gradle` file:
+  ```groovy
+  implementation 'com.eclypses:eclypses-aws-mte-relay-client-android-release:x.x.x'
+  ```
+- Confirm that MavenCentral is one of your listed repositories.
+
+### 2. Local AAR File
+- Create a 'libs' directory at the same level as the `src` directory in your app.
+- Download the Relay Library from [GitHub](https://github.com/Eclypses/eclypses-aws-mte-relay-client-android.git) and compile it.
+- Add the resulting `.aar` file (e.g., `eclypses-aws-mte-relay-client-android-release-x.x.x-release.aar`) to the 'libs' directory.
+- Add the following line to your module's `build.gradle` dependencies block:
+  ```groovy
+  implementation files('libs/eclypses-aws-mte-relay-client-android-release-x.x.x-release.aar')
+  ```
+
+<br><br>
+
+# Table of Contents
+- [Getting Started](#getting-started)
+- [Simple Volley GET and POST requests](#simple-volley-get-and-post-requests)
+- [Simple Streamed File Upload request](#simple-streamed-file-upload-request)
+- [Simple Streamed File Download request](#simple-streamed-file-download-request)
+- [RePair with Server](#repair-with-server)
+- [Adjust Relay Settings as Necessary](#adjust-relay-settings-as-necessary)
+- [Common Issues & Debugging](#common-issues--debugging)
+- [Contact Eclypses](#contact-eclypses)
 
 <br><br>
 
 # Getting Started
--	**NOTE - Currently, this library supports Volley requests for simple GET and POST requests. Additionally, file streamed uploads and downloads are supported. **
+- **NOTE - Currently, this library supports Volley requests for simple GET and POST requests. Additionally, file streamed uploads and downloads are supported.**
 - In the class where you will maintain the Relay reference ... 
    - Create a class variable for the relay singleton. 
    <br><br>
    ``` java
    Relay relay;
-
    ```
    - Then, in the constructor for that class, instantiate the Relay class, passing ...
       -  the context,
-      - and a new instance of InstantiateRelayCallback.
+      - and a new instance of RelayResponseListener.
    ``` java
    relay = Relay.getInstance(ctx, new RelayResponseListener() {
       @Override
@@ -38,12 +70,41 @@ This AAR library provides the Java language Eclypses MteRelay Client library.
    ```
 <br><br>
 
+# Quick Start Example
+```java
+Relay relay = Relay.getInstance(context, new RelayResponseListener() {
+    @Override
+    public void onCompletion(boolean success, String message) {
+        Log.d("MTE", "Relay Setup: " + message);
+    }
+});
+String url = "https://myRelayServer.com/api/data";
+Request<String> request = new StringRequest(Request.Method.GET, url,
+    response -> Log.d("MTE", "Response: " + response),
+    error -> Log.e("MTE", "Error: " + error.getMessage())
+);
+
+Map<String, String>  headersToEncrypt = new HashMap<>();
+   headersToEncrypt.put("Authorization", "<authToken>");
+relay.addToMteRequestQueue(request, headersToEncrypt, new RelayDataTaskListener() {
+    @Override
+    public void onResponse(byte[] responseBytes, Map<String, List<String>> responseHeaders) {
+        Log.d("MTE", "Response received.");
+    }
+
+    @Override
+    public void onError(String message, Map<String, List<String>> responseHeaders) {
+        Log.e("MTE", "Request Failed: " + message);
+    }
+});
+```
+
 # Simple Volley GET and POST requests
    
-- When creating your Volley request, instead of adding your original server Url, add the url (Scheme and authority, i.e. https://myAwsRelayServer/) of the AWS Relay Server that you are targeting. 
-- Then, after creating your Volley request, instead of calling `RequestSingleton.getInstance(context).addToRequestQueue(request);`, call relay.addToMteRequestQueue(), passing ...
+- When creating your Volley request, instead of adding your original server Url, add the url (Scheme and authority, i.e. https://myRelayServer/) of the Relay Server that you are targeting. 
+- Then, after creating your Volley request, instead of calling `RequestSingleton.getInstance(context).addToRequestQueue(request);`, call `relay.addToMteRequestQueue()`, passing ...
    - the request object, 
-   - a String[] of the names of any http headers you wish to have protected by Mte, 
+   - a String[] of the names of any HTTP headers you wish to have protected by MTE, 
    - and a new RelayDataTaskListener.
 - Optionally,  pathnamePrefix, if required by your infrastructure.
    <br><br>
@@ -52,111 +113,121 @@ String[] headersToEncrypt = new String[] {"Content-Length"};
 
 // Without pathnamePrefix
 relay.addToMteRequestQueue(request, headersToEncrypt, new RelayDataTaskListener() {
+    @Override
+    public void onError(String message, Map<String, List<String>> responseHeaders) {
+        // Handle errors appropriately and response headers as necessary
+    }
+
+    @Override
+    public void onResponse(byte[] responseBytes, Map<String, List<String>> responseHeaders) {
+        // Returns the response body as a byte[], and the response headers as a Map  
+    }
+
+    @Override
+    public void onResponse(JSONObject responseJson, Map<String, List<String>> responseHeaders) {
+        // Returns the response body as a JSONObject, and the response headers as a Map 
+    }
+});
 
 // With pathnamePrefix
 String pathnamePrefix = "<your-pathname-prefix>";
 relay.addToMteRequestQueue(request, headersToEncrypt, pathnamePrefix, new RelayDataTaskListener() {
-   @Override
-   public void onError(String message, Map<String, List<String>> responseHeaders) {
-      // Handle errors appropriately and response headers as necessary
-   }
+    @Override
+    public void onError(String message, Map<String, List<String>> responseHeaders) {
+        // Handle errors appropriately and response headers as necessary
+    }
 
-   @Override
-   public void onResponse(byte[] responseBytes, Map<String, List<String>> responseHeaders) {
-   // Returns returns the response body as a byte[], and the response headers as a Map  
-   }
+    @Override
+    public void onResponse(byte[] responseBytes, Map<String, List<String>> responseHeaders) {
+        // Returns the response body as a byte[], and the response headers as a Map  
+    }
 
-   @Override
-   public void onResponse(JSONObject responseJson, Map<String, List<String>> responseHeaders) {
-   // Returns returns the response body as a JSONObject, and the response headers as a Map 
-   }
+    @Override
+    public void onResponse(JSONObject responseJson, Map<String, List<String>> responseHeaders) {
+        // Returns the response body as a JSONObject, and the response headers as a Map 
+    }
 });
 ```
 <br><br>
 
 # Simple Streamed File Upload request
 
-- Create a new RelayFileRequestProperties object
+- Create a new `RelayFileRequestProperties` object
 ``` java
 File origFile = new File(ctx.getFilesDir(), filename);
 String route = "route/portion/of/url";
 RelayFileRequestProperties reqProperties = new RelayFileRequestProperties(
-                        // File object to upload,
-                        // Server path ("https://myRelayServer.com")
-                        // request headers for this request as a Map<String, String>,
-                        // String[] of header names to protect with Mte,
-                        // Instance of RelayStreamCallback);
+                        origFile, // File object to upload
+                        "https://myRelayServer.com", // Server path
+                        new HashMap<String, String>(), // Request headers for this request
+                        new String[]{"Authorization"}, // Header names to protect with MTE
+                        new RelayStreamCallback() {
+                            @Override
+                            public void getRequestBodyStream(PipedOutputStream outputStream) {
+                                // Convert your entire HttpRequest, including the file bytes to a byte[] and write it to the output stream.
+                                // This allows large files (up to nearly 2 gigabytes) to be streamed to the server.
+                                // Write HttpRequestBytes
+                                outputStream.write(HttpRequestBytes, 0, HttpRequestBytes.length);
+                                outputStream.flush();
+
+                                // Stream the file in chunks
+                                FileInputStream inputStream = new FileInputStream(origFile);
+                                byte[] buffer = new byte[fileChunkSize];
+                                int bytesRead;
+                                while ((bytesRead = inputStream.read(buffer)) != -1) {
+                                    outputStream.write(buffer, 0, bytesRead);
+                                    outputStream.flush();
+                                }
+
+                                inputStream.close();
+                                outputStream.close();
+                            }
+                        });
 ```
-- Then, call relay.uploadFile, passing ...
-   - the RelayFileRequestProperties object you just created'
-   - the route portion of the url you are uploading to,
-   - optionally, pathnamePrefix, if required by your infrastructure
-   - an instance of RelayStreamResponseListener, // returns response and headers
-   - an instance of RelayStreamCompletionCallback. // provides upload progress updates
+- Then, call `relay.uploadFile`, passing ...
+   - the `RelayFileRequestProperties` object you just created,
+   - the route portion of the URL you are uploading to,
+   - optionally, pathnamePrefix, if required by your infrastructure,
+   - an instance of `RelayStreamResponseListener`, // returns response and headers
+   - an instance of `RelayStreamCompletionCallback`. // provides upload progress updates
    <br><br>
 ``` java
 relay.uploadFile(AppSettings.relayHosts[0], reqProperties, route, <optional pathnamePrefix>, new RelayStreamResponseListener() {
    @Override
-   public relayStreamResponse(boolean success, 
-                              String message, 
-                              String errorMessage, 
-                              Map<String, List<String>> responseHeaders); {
+   public void relayStreamResponse(boolean success, String message, String errorMessage, Map<String, List<String>> responseHeaders) {
       // Handle response as necessary
    }
-});
+}, new RelayStreamCompletionCallback() {
+   @Override
+   public void onProgressUpdate(int bytesCompleted, int totalBytes) {
+      // Handle progress u[dates as appropriate
+   };
+};
 ```
-- Additionally, in the class where your HttpRequest is created, implement RelayStreamCallback and add the required function 'getRequestBodyStream(PipedOutputStream outputStream)'
-
-<br><br>
-
-``` java
-@Override // Callback from Relay Module
-    public void getRequestBodyStream(PipedOutputStream outputStream) {
-        // convert your entire HttpRequest, including the file bytes to a byte[] and write it to the output stream. In our demonstration app, we convert the request object to a byte[] and write it to the OutputStream, then read the file by chunks and write each chunk into the OutputStream. This allows that even a large file (up to nearly 2 gigabytes) to be streamed up to the server, provided that your server can accept a file stream. 
-        
-        outputStream.write(HttpRequestBytes, 0, HttpRequestBytes.length);
-        outputStream.flush();
-
-        FileInputStream inputStream = new FileInputStream(fileToUpload);
-        byte[] buffer = new byte[fileChunkSize];
-        int bytesRead = -1;
-        while ((bytesRead = inputStream.read(buffer)) != -1) {
-            outputStream.write(buffer, 0, bytesRead);
-            outputStream.flush();
-        }
-
-        inputStream.close();
-        outputStream.close();
-    }
-```
-- The entire stream will be protected with Mte, including any headers you have included in the 'headersToEncrypt' reqProperties object. Upon being received by the Relay Server, the Stream and Headers will be decrypted 'on-the-fly' and the original request including headers and file will be streamed through to your Server.
-
 <br><br>
 
 # Simple Streamed File Download request
 
-- Create a new RelayFileRequestProperties object
+- Create a new `RelayFileRequestProperties` object
 ``` java
- RelayFileRequestProperties reqProperties = new RelayFileRequestProperties(
-                        // Server path ("https://myRelayServer.com")
-                        // route portion of download Url,
-                        // path of location where you want to store the downloaded file,
-                        // request headers for this request as a Map<String, String>,
-                        // String[] of header names to protect with Mte
+RelayFileRequestProperties reqProperties = new RelayFileRequestProperties(
+                        "https://myRelayServer.com", // Server path
+                        "route/portion/of/download/Url", // Route portion of download URL
+                        new File(ctx.getFilesDir(), "downloadedFile.txt"), // Path to store downloaded file
+                        new HashMap<String, String>(), // Request headers for this request
+                        new String[] {"Authorization"} // Header names to protect with MTE
+);
 ```
-- Then call relay.downloadFile, passing ...
-   - the RelayFileRequestProperties object you just created'
-   - optionally, a pathnamePrefix, if required by your infrastructure
-   - a new instance of RelayResponseListener
+- Then call `relay.downloadFile`, passing ...
+   - the `RelayFileRequestProperties` object you just created,
+   - optionally, a pathnamePrefix, if required by your infrastructure,
+   - a new instance of `RelayResponseListener`.
  <br><br>
 
 ``` java
 relay.downloadFile(AppSettings.relayHosts[0], reqProperties, <optional pathnamePrefix>, new RelaystreamResponseListener() {
    @Override
-   public relayStreamResponse(boolean success, 
-                              String message, 
-                              String errorMessage, 
-                              Map<String, List<String>> responseHeaders); {
+   public void relayStreamResponse(boolean success, String message, String errorMessage, Map<String, List<String>> responseHeaders) {
       // Handle response as necessary
    }
 });
@@ -165,10 +236,10 @@ relay.downloadFile(AppSettings.relayHosts[0], reqProperties, <optional pathnameP
 
 # RePair with Server
 - Most situations where Client and Server get out of sync are handled automatically but a function is available to trigger a rePair attempt.
-- Call 'relay.rePairWithRelayServer' passing ...
+- Call `relay.rePairWithRelayServer` passing ...
    - the path of the server with which you wish to rePair (https://myRelayServer.com),
-    - Optionally, pathnamePrefix, if required by your infrastructure
-   - and a new instance of RelayResponseListener
+   - optionally, pathnamePrefix, if required by your infrastructure,
+   - and a new instance of `RelayResponseListener`.
 <br><br>
 
 ``` java
@@ -177,20 +248,19 @@ relay.rePairWithRelayServer(relayServerPath, <optional pathnamePrefix>);
 ```
 
 # Adjust Relay Settings as Necessary
-- The RelaySettings actor contains a few settings that can be edited at runtime via public functions as shown below. Each new Relay instantiation begins with the default values.Consequently, when adjustRelaySettings is called with new values different than the existing values, a rePair with the Relay Server is automatically called as well.
-
+- The `RelaySettings` actor contains a few settings that can be edited at runtime via public functions as shown below. Each new Relay instantiation begins with the default values. Consequently, when `adjustRelaySettings` is called with new values different than the existing values, a rePair with the Relay Server is automatically called as well.
 
 ``` java
-   - Sets the maximum number of streamed bytes processed in a single chunk. Processing often occurs on fewer bytes.
-int newStreamChunkSize = <newValue>; // Defaults to 1048576. Range 4096 (4KB) to 10485760 (10 MB)
+   // Sets the maximum number of streamed bytes processed in a single chunk. Processing often occurs on fewer bytes.
+   int newStreamChunkSize = <newValue>; // Defaults to 1048576. Range 4096 (4KB) to 10485760 (10 MB)
 
-   - The Mobile Relay Client provides multiple pairs used in a round-robin fashion to facilitate high throughput without collisions.  
-int newPairPoolSize = <newValue>; // Defaults to 3. Range 1 to 10
+   // The Mobile Relay Client provides multiple pairs used in a round-robin fashion to facilitate high throughput without collisions.  
+   int newPairPoolSize = <newValue>; // Defaults to 3. Range 1 to 10
 
-   - The Mobile Relay Client has the ability to persist pairing with server, even though client has been shut down. Default is false because a new pairing happens quickly at relay instantiation and removes the chance of the pairing having been corrupted. 
-boolean persistPair = true // Defaults to false on each Relay instantiation
+   // The Mobile Relay Client has the ability to persist pairing with server, even though client has been shut down. Default is false because a new pairing happens quickly at relay instantiation and removes the chance of the pairing having been corrupted. 
+   boolean persistPair = true; // Defaults to false on each Relay instantiation
 
-String result = relay.adjustRelaySettings(
+   String result = relay.adjustRelaySettings(
                 AppSettings.relayHost,
                 pathnamePrefix, // (if required by your infrastructure)
                 newStreamChunkSize,
@@ -200,8 +270,20 @@ String result = relay.adjustRelaySettings(
 
 <br><br>
 
-<div style="page-break-after: always; break-after: page;"></div>
+# Common Issues & Debugging
 
+### ❌ Issue: "relayStreamResponse failed with error"
+✅ **Solution:** Check if your Relay server URL is correct and reachable.
+
+### ❌ Issue: "Null Pointer Exception in getInstance()"
+✅ **Solution:** Ensure you are calling `Relay.getInstance()` in your **Application class or an Activity with a valid context**.
+
+### ❌ Issue: "File upload fails after 10MB"
+✅ **Solution:** Check if your server supports **streamed uploads**.
+
+<br><br>
+
+<div style="page-break-after: always; break-after: page;"></div>
 
 # Contact Eclypses
 
