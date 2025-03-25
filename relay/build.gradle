@@ -38,7 +38,7 @@ publishing {
 
             groupId = 'com.eclypses'
             artifactId = 'eclypses-aws-mte-relay-client-android-release'
-            version = '3.6.2'
+            version = '3.6.0'
 
             afterEvaluate {
                 artifact("$buildDir/outputs/aar/${artifactId}-${version}-release.aar")
