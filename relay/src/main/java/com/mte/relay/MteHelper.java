@@ -25,7 +25,6 @@
 package com.mte.relay;
 
 import android.util.Base64;
-import android.util.Log;
 
 import com.eclypses.mte.MteBase;
 
@@ -33,7 +32,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -120,8 +118,6 @@ public class MteHelper {
         }
         return decodeResult;
     }
-
-
 
     public DecodeResult decode(String pairId, byte[] encoded) throws MteException {
         DecodeResult decodeResult = new DecodeResult();

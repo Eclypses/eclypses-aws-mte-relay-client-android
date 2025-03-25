@@ -4,13 +4,13 @@ import java.util.Map;
 
 public class FileDownloadProperties {
 
-    String hostUrl;
+    final String hostUrl;
     String route;
-    String downloadPath;
-    MteHelper mteHelper;
-    String[] headersToEncrypt;
-    Map<String,String> origHeaders;
-    RelayOptions relayOptions;
+    final String downloadPath;
+    final MteHelper mteHelper;
+    final String[] headersToEncrypt;
+    final Map<String,String> origHeaders;
+    final RelayOptions relayOptions;
 
     public FileDownloadProperties(String hostUrl,
                                   String route,
