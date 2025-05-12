@@ -26,11 +26,11 @@ package com.mte.relay;
 
 class RelaySettings {
 
+    static String relayVersion = "3.7.0";
     static int streamChunkSize = 65536;
-//    static int downloadChunkSize = 65536;
     static final String licenseCompanyName = "Eclypses Inc";
     static final String licenseKey = "9eHOohOm/GwY01xbvNTL9B+1";
     static boolean persistPairs = false;
-    static int pairPoolSize = 3;
+    static int pairPoolSize = 5;
 
 }

@@ -88,7 +88,6 @@ public class Pair {
         encSecret = new byte[secretSize];
         int kyberStatus = encMteKyber.decryptSecret(encResponderEncryptedSecret, encSecret);
         checkKyberStatus(kyberStatus, "Kyber getSharedSecret Error");
-//        encoder = new MteMkeEnc();
         encoder.setEntropy(encSecret);
         encoder.setNonce(encNonce);
         MteStatus  status = encoder.instantiate(encPersStr);
@@ -100,7 +99,6 @@ public class Pair {
     }
 
     private void instantiateDecoder() throws MteException {
-//        decoder = new MteMkeDec();
         decoder = new MteMkeDec(10, -63);
         decSecret = new byte[secretSize];
         int kyberStatus = decMteKyber.decryptSecret(decResponderEncryptedSecret, decSecret);

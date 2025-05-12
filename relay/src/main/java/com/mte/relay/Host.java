@@ -26,6 +26,7 @@ package com.mte.relay;
 
 import android.content.Context;
 import android.net.Uri;
+import android.util.Log;
 
 import com.android.volley.AuthFailureError;
 import com.android.volley.Header;
@@ -333,6 +334,7 @@ public class Host {
                 } else {
                     Map<String, List<String>> processedHeaders = new HashMap<>();
                     String responseString = "Status Code: " + code + " ";
+                    LogHelper.error("HOST", responseString);
                     try {
                         for (Header header : relayHeaders.responseHeaderList) {
                             processedHeaders.put(header.getName(), Collections.singletonList(header.getValue()));
@@ -394,6 +396,7 @@ public class Host {
     }
 
     public void rePairWithHost(InstantiateHostCallback callback) {
+        LogHelper.info("HOST", "RePairing with " + hostUrl);
         try {
             hostStorageHelper.removeStoredHost();
             hostPaired = false;
@@ -441,6 +444,7 @@ public class Host {
     }
 
     synchronized private void checkForRelayServer(InstantiateHostCallback callback) {
+        LogHelper.info("Host", "Checking for Host " + hostUrl);
         RelayConnectionModel connectionModel = new RelayConnectionModel(
                 hostUrl,
                 Request.Method.HEAD,
@@ -456,11 +460,14 @@ public class Host {
 
             @Override
             public void onError(int code, byte[] data, RelayHeaders relayHeaders) {
-                callback.onError("Code: " + code + " Message: Unable to locate Relay Server at " + hostUrl);
+                String errorMessage = "Code: " + code + " Message: Unable to locate Relay Server at " + hostUrl;
+                LogHelper.error("HOST", errorMessage);
+                callback.onError(errorMessage);
             }
 
             @Override
             public void onJsonResponse(JSONObject response, RelayHeaders relayHeaders) {
+                LogHelper.info("HOST", "Host " + hostUrl + " found. Making Pairing call");
                 hostClientId = relayHeaders.clientId;
                 makePairingCall(hostUrl, callback);
             }
@@ -479,6 +486,7 @@ public class Host {
 
     synchronized private void makePairingCall(String hostUrl, InstantiateHostCallback callback) {
         Map<String, Pair> pairMap = mteHelper.createPairMap(RelaySettings.pairPoolSize);
+        LogHelper.info("Host", "Pairing " + pairMap.size() + " pairs with " + hostUrl);
         JSONArray pairMapArray = new JSONArray();
         pairMap.forEach((pairId, pair) -> {
             JSONObject pairJson = new JSONObject();
@@ -512,7 +520,9 @@ public class Host {
 
             @Override
             public void onError(int code, byte[] data, RelayHeaders relayHeaders) {
-                callback.onError("Code: " + code + " Message: Unable to pair with relay Server " + hostUrl);
+                String errorMessage = "Code: " + code + " Message: Unable to pair with relay Server " + hostUrl;
+                LogHelper.error("HOST", errorMessage);
+                callback.onError(errorMessage);
             }
 
             @Override
@@ -548,6 +558,7 @@ public class Host {
                 }
                 try {
                     notifyPaired();
+                    LogHelper.info("HOST", "Successfully paired with " + hostUrl);
                     callback.hostInstantiated(hostUrl, Host.this);
                     return;
                 } catch (JSONException e) {
@@ -625,6 +636,7 @@ public class Host {
 
         // Add the "/" back onto the UrlEncodedRoute
         encryptedRouteResult.encodedStr = "/" + urlEncodedRoute;
+        LogHelper.info("HOST", "Encrypted Request Route");
         return encryptedRouteResult;
     }
 
@@ -636,8 +648,10 @@ public class Host {
             listener.onError(e.getMessage(), null);
         }
         if (origBody != null && origBody.length > 0) {
+            LogHelper.info("HOST", "Encrypted Request Body");
             return mteHelper.encode(pairId, origBody);
         } else {
+            LogHelper.info("HOST", "No Request Body to encrypt.");
             return new EncodeResult(pairId, origBody);
         }
     }

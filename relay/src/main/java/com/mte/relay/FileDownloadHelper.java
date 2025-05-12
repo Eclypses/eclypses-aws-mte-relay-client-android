@@ -77,6 +77,7 @@ public class FileDownloadHelper {
         }
         httpConn.setRequestProperty("x-mte-relay-eh", encodedHeadersResult.encodedStr);
         httpConn.setRequestProperty("x-mte-relay", RelayOptions.formatMteRelayHeader(properties.relayOptions));
+        LogHelper.trace("FileDownloadHelper", "FileDownloadHelper Instantiated");
     }
     // endregion
 
