@@ -7,9 +7,13 @@ public final class NetworkUtils {
     }
 
     public static boolean shouldRePairWithHost(int code, RetryableRequestData requestData) {
-        return Constants.lowMteErrorCode <= code &&
+        boolean shouldRePair = Constants.lowMteErrorCode <= code &&
                 code <= Constants.highMteErrorCode &&
                 requestData != null;
+        if (shouldRePair) {
+            LogHelper.info("RePair", "Status code: " + code + " so we'll rePair and retry previous Request");
+        }
+        return shouldRePair;
     }
 
 }

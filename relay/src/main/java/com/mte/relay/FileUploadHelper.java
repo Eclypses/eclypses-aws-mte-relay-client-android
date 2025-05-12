@@ -83,6 +83,7 @@ public class FileUploadHelper {
         httpConn.setRequestProperty("x-mte-relay", RelayOptions.formatMteRelayHeader(properties.relayOptions));
 
         outputStream = httpConn.getOutputStream();
+        LogHelper.trace("FileUploadHelper", "FileUploadHelper Instantiated");
     }
     // endregion
 
