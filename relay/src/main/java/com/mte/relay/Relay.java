@@ -50,14 +50,13 @@ public class Relay {
     public static Relay getInstance(Context context, RelayResponseListener listener) {
         if (instance == null) {
             System.setProperty("LOG_DIR", context.getFilesDir().getAbsolutePath());
+            LogHelper.trace("Relay", "Logging initialized.");
             instance = new Relay(context, listener);
         }
         return instance;
     }
 
     private Relay(Context context, RelayResponseListener listener) {
-        LogHelper.setFileLoggingEnabled(true);
-        LogHelper.trace("Relay", "Logging initialized.");
         if (!MteBase.initLicense(RelaySettings.licenseCompanyName, RelaySettings.licenseKey)) {
             String errorMessage = "MTE License Check Failed";
             LogHelper.error("Relay", errorMessage);
@@ -66,6 +65,9 @@ public class Relay {
         LogHelper.info("Relay", "Using Relay Version " + RelaySettings.relayVersion + " and Mte Version " + MteBase.getVersion());
         ctx = context;
         relayResponseListener = listener;
+
+        // Set FileLogging to the default state
+        LogHelper.setFileLoggingEnabled(LogHelper.isFileLoggingEnabled());
     }
     // endregion
 
