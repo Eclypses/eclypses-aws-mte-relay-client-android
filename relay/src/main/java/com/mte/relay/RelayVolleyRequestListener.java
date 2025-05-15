@@ -24,16 +24,18 @@
 
 package com.mte.relay;
 
+import com.android.volley.NetworkResponse;
+
 import org.json.JSONObject;
 
 import java.util.List;
 import java.util.Map;
 
-public interface RelayDataTaskListener {
+public interface RelayVolleyRequestListener {
 
-    void onError(String message, Map<String, List<String>> responseHeaders);
+    void onError(NetworkResponse networkResponse, String message, Map<String, List<String>> responseHeaders);
 
-    void onResponse(byte[] responseBytes, Map<String, List<String>> responseHeaders);
+    void onResponse(NetworkResponse networkResponse, byte[] responseBytes, Map<String, List<String>> responseHeaders);
 
-    void onResponse(JSONObject responseJson, Map<String, List<String>> responseHeaders);
+    void onResponse(NetworkResponse networkResponse, JSONObject responseJson, Map<String, List<String>> responseHeaders);
 }

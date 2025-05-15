@@ -24,17 +24,19 @@
 
 package com.mte.relay;
 
+import com.android.volley.NetworkResponse;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-public interface RWHResponseListener {
+public interface NetworkResponseListener {
 
-    void onError(int code, byte[] data, RelayHeaders relayHeaders);
+    void onError(NetworkResponse networkResponse, byte[] errorResponseData, RelayHeaders relayHeaders);
 
-    void onJsonResponse(JSONObject jsonResponse, RelayHeaders relayHeaders);
+    void onJsonResponse(NetworkResponse networkResponse, JSONObject jsonResponseData, RelayHeaders relayHeaders);
 
-    void onJsonArrayResponse(JSONArray jsonArrayResponse, RelayHeaders relayHeaders);
+    void onJsonArrayResponse(NetworkResponse networkResponse, JSONArray jsonArrayResponseData, RelayHeaders relayHeaders);
 
-    void onByteArrayResponse(byte[] byteArrayResponse, RelayHeaders relayHeaders);
+    void onByteArrayResponse(NetworkResponse networkResponse, byte[] byteArrayResponseData, RelayHeaders relayHeaders);
 
 }

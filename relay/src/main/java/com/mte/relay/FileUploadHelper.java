@@ -224,6 +224,7 @@ public class FileUploadHelper {
                     sb.append(new String(finishEncryptResult.decodedBytes, charset));
                 }
                 listener.relayStreamResponse(
+                        status,
                         true,
                         sb.toString(),
                         null,
@@ -235,6 +236,7 @@ public class FileUploadHelper {
             httpConn.disconnect();
         } else {
             listener.relayStreamResponse(
+                    status,
                     false,
                     null,
                     "Server returned non-OK status: " + status,

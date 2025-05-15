@@ -101,6 +101,7 @@ public class FileDownloadHelper {
 
                     JSONObject jsonResponse = createJsonResponse(downloadPath);
                     listener.relayStreamResponse(
+                            status,
                             true,
                             jsonResponse.toString(2),
                             null,
@@ -108,6 +109,7 @@ public class FileDownloadHelper {
                     callback.onCallback();
                 } else {
                     listener.relayStreamResponse(
+                            status,
                             false,
                             null,
                             httpConn.getResponseMessage(),
@@ -116,6 +118,7 @@ public class FileDownloadHelper {
                 }
             } catch (IOException | JSONException | MteException e) {
                 listener.relayStreamResponse(
+                        -1,
                         false,
                         null,
                         e.getMessage(),

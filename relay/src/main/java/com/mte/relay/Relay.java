@@ -25,7 +25,6 @@
 package com.mte.relay;
 
 import android.content.Context;
-import android.util.Log;
 
 import com.android.volley.Request;
 import com.eclypses.mte.MteBase;
@@ -72,11 +71,11 @@ public class Relay {
     // endregion
 
     // region Public Methods
-    public <T> void addToMteRequestQueue(Request<T> req, String[] headersToEncrypt, RelayDataTaskListener listener) {
+    public <T> void addToMteRequestQueue(Request<T> req, String[] headersToEncrypt, RelayVolleyRequestListener listener) {
         addToMteRequestQueue(req, headersToEncrypt, null, listener);
     }
 
-    public <T> void addToMteRequestQueue(Request<T> req, String[] headersToEncrypt, String pathnamePrefix, RelayDataTaskListener listener) {
+    public <T> void addToMteRequestQueue(Request<T> req, String[] headersToEncrypt, String pathnamePrefix, RelayVolleyRequestListener listener) {
         LogHelper.trace("Relay", "Volley Request added to Queue");
         String relayServerPath = null;
         try {
@@ -86,14 +85,14 @@ public class Relay {
             relayServerPath = protocol + "://" + authority;
         } catch (MalformedURLException e) {
             LogHelper.error("Relay", e.getMessage());
-            listener.onError(e.getMessage(), null);
+            listener.onError(null, e.getMessage(), null);
         }
         getHost(buildHostUrl(relayServerPath, pathnamePrefix),
                 new InstantiateHostCallback() {
                     @Override
                     public void onError(String message) {
                         LogHelper.error("Relay",message);
-                        listener.onError(message, null); }
+                        listener.onError(null, message, null); }
 
                     @Override
                     public void hostInstantiated(String hostUrl, Host host) {
@@ -122,6 +121,7 @@ public class Relay {
                         public void onError(String message) {
                             LogHelper.error("Relay", message);
                             listener.relayStreamResponse(
+                                    -1,
                                 false,
                                 null,
                                 message,
@@ -150,6 +150,7 @@ public class Relay {
                         public void onError(String message) {
                             LogHelper.error("Relay",message);
                             listener.relayStreamResponse(
+                                    -1,
                                     false,
                                     null,
                                     message,
@@ -162,6 +163,7 @@ public class Relay {
                                 host.downloadFile(reqProperties, listener);
                             } catch (IOException e) {
                                 listener.relayStreamResponse(
+                                        -1,
                                         false,
                                         null,
                                         e.getMessage(),
