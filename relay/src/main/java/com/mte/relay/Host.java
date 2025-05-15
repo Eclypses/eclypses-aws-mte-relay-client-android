@@ -26,10 +26,10 @@ package com.mte.relay;
 
 import android.content.Context;
 import android.net.Uri;
-import android.util.Log;
 
 import com.android.volley.AuthFailureError;
 import com.android.volley.Header;
+import com.android.volley.NetworkResponse;
 import com.android.volley.Request;
 
 import org.json.JSONArray;
@@ -116,7 +116,7 @@ public class Host {
             rePairWithHost(new InstantiateHostCallback() {
                 @Override
                 public void onError(String message) {
-                  listener.relayStreamResponse(false, "", message, null);
+                  listener.relayStreamResponse(code, false, "", message, null);
                 }
 
                 @Override
@@ -135,7 +135,7 @@ public class Host {
             rePairWithHost(new InstantiateHostCallback() {
                 @Override
                 public void onError(String message) {
-                    listener.relayStreamResponse(false, "", message, null);
+                    listener.relayStreamResponse(code, false, "", message, null);
                 }
 
                 @Override
@@ -148,7 +148,7 @@ public class Host {
     // endregion
 
     // region Public Methods
-    public <T> void sendRequest(Request<T> req, String[] headersToEncrypt, RelayDataTaskListener listener) {
+    public <T> void sendRequest(Request<T> req, String[] headersToEncrypt, RelayVolleyRequestListener listener) {
         Thread sendingTread = new Thread(() -> {
             try {
                 sendUpdatedRequest(req, headersToEncrypt, listener);
@@ -156,7 +156,7 @@ public class Host {
                      UnsupportedEncodingException |
                      AuthFailureError |
                      MalformedURLException e) {
-                listener.onError(e.getMessage(), null);
+                listener.onError(null, e.getMessage(), null);
             }
         });
         sendingTread.start();
@@ -180,6 +180,7 @@ public class Host {
                 wait();
             } catch (InterruptedException e) {
                 listener.relayStreamResponse(
+                        -1,
                         false,
                         null,
                         e.getMessage(),
@@ -213,6 +214,7 @@ public class Host {
                         conditionallyStoreStates();
                     } catch (JSONException e) {
                         listener.relayStreamResponse(
+                                -1,
                                 false,
                                 null,
                                 e.getMessage(),
@@ -223,6 +225,7 @@ public class Host {
                      MteException |
                     RelayException e) {
                 listener.relayStreamResponse(
+                        -1,
                         false,
                         null,
                         e.getMessage(),
@@ -245,6 +248,7 @@ public class Host {
                 wait();
             } catch (InterruptedException e) {
                 listener.relayStreamResponse(
+                        -1,
                         false,
                         null,
                         " Exception: " +e.getMessage(),
@@ -278,6 +282,7 @@ public class Host {
                 conditionallyStoreStates();
             } catch (JSONException e) {
                 listener.relayStreamResponse(
+                        -1,
                         false,
                         null,
                         e.getMessage(),
@@ -288,7 +293,7 @@ public class Host {
 
     synchronized public <T> void sendUpdatedRequest(Request<T> origRequest,
                                                     String[] headersToEncrypt,
-                                                    RelayDataTaskListener listener)
+                                                    RelayVolleyRequestListener listener)
             throws InterruptedException,
             UnsupportedEncodingException,
             MalformedURLException,
@@ -326,14 +331,14 @@ public class Host {
                         null),
                 setRelayOptions(encryptedBodyBytes != null,
                         encryptedRouteResult.pairId));
-        webHelper.sendBytes(relayConnectionModel, origRequest, new RWHResponseListener() {
+        webHelper.sendBytes(relayConnectionModel, origRequest, new NetworkResponseListener() {
             @Override
-            public void onError(int code, byte[] data, RelayHeaders relayHeaders) {
-                if (NetworkUtils.shouldRePairWithHost(code, prevRequestData)) {
+            public void onError(NetworkResponse networkResponse, byte[] data, RelayHeaders relayHeaders) {
+                if (NetworkUtils.shouldRePairWithHost(networkResponse.statusCode, prevRequestData)) {
                     rePairWithHost(createRePairCallback(prevRequestData, listener));
                 } else {
                     Map<String, List<String>> processedHeaders = new HashMap<>();
-                    String responseString = "Status Code: " + code + " ";
+                    String responseString = "Status Code: " + networkResponse + " ";
                     LogHelper.error("HOST", responseString);
                     try {
                         for (Header header : relayHeaders.responseHeaderList) {
@@ -356,22 +361,22 @@ public class Host {
                     } catch (MteException e) {
                         responseString = responseString + e.getMessage();
                     }
-                    listener.onError(responseString, processedHeaders);
+                    listener.onError(networkResponse, responseString, processedHeaders);
                 }
             }
 
             @Override
-            public void onJsonResponse(JSONObject jsonResponse, RelayHeaders relayHeaders) {
-                listener.onError("Unexpected Volley jsonResponse. Response: " + jsonResponse.toString(), null);
+            public void onJsonResponse(NetworkResponse networkResponse, JSONObject jsonResponse, RelayHeaders relayHeaders) {
+                listener.onError(networkResponse, "Unexpected Volley jsonResponse. Response: " + jsonResponse.toString(), null);
             }
 
             @Override
-            public void onJsonArrayResponse(JSONArray jsonArrayResponse, RelayHeaders relayHeaders) {
-                listener.onError("Unexpected Volley jsonArrayResponse. Response: " + jsonArrayResponse.toString(), null);
+            public void onJsonArrayResponse(NetworkResponse networkResponse, JSONArray jsonArrayResponse, RelayHeaders relayHeaders) {
+                listener.onError(networkResponse, "Unexpected Volley jsonArrayResponse. Response: " + jsonArrayResponse.toString(), null);
             }
 
             @Override
-            public void onByteArrayResponse(byte[] byteArrayResponse, RelayHeaders relayHeaders) {
+            public void onByteArrayResponse(NetworkResponse networkResponse, byte[] byteArrayResponse, RelayHeaders relayHeaders) {
                 Map<String, List<String>> processedHeaders = new HashMap<>();
                 try {
                     for (Header header : relayHeaders.responseHeaderList) {
@@ -379,16 +384,16 @@ public class Host {
                     }
                     NetworkHeaderHelper.processResponseHeaders(mteHelper, relayHeaders.pairId, processedHeaders, relayHeaders.encryptedDecryptedHeaders);
                 } catch (MteException e) {
-                    listener.onError(e.getMessage(), processedHeaders);
+                    listener.onError(networkResponse, e.getMessage(), processedHeaders);
                 }
                 if (byteArrayResponse != null) {
                     DecodeResult bodyDecodeResult = mteHelper.decode(relayHeaders.pairId, byteArrayResponse);
                     try {
                         conditionallyStoreStates();
                     } catch (JSONException e) {
-                        listener.onError(e.getMessage(), null);
+                        listener.onError(networkResponse, e.getMessage(), null);
                     }
-                    listener.onResponse(bodyDecodeResult.decodedBytes, processedHeaders);
+                    listener.onResponse(networkResponse, bodyDecodeResult.decodedBytes, processedHeaders);
                     prevRequestData = null;
                 }
             }
@@ -456,29 +461,29 @@ public class Host {
                 new RelayHeaders(),
                 setRelayOptions(true, null)
         );
-        webHelper.sendJson(connectionModel, null, new RWHResponseListener() {
+        webHelper.sendJson(connectionModel, null, new NetworkResponseListener() {
 
             @Override
-            public void onError(int code, byte[] data, RelayHeaders relayHeaders) {
-                String errorMessage = "Code: " + code + " Message: Unable to locate Relay Server at " + hostUrl;
+            public void onError(NetworkResponse networkResponse, byte[] data, RelayHeaders relayHeaders) {
+                String errorMessage = "Code: " + networkResponse.statusCode + " Message: Unable to locate Relay Server at " + hostUrl;
                 LogHelper.error("HOST", errorMessage);
                 callback.onError(errorMessage);
             }
 
             @Override
-            public void onJsonResponse(JSONObject response, RelayHeaders relayHeaders) {
+            public void onJsonResponse(NetworkResponse networkResponse, JSONObject response, RelayHeaders relayHeaders) {
                 LogHelper.info("HOST", "Host " + hostUrl + " found. Making Pairing call");
                 hostClientId = relayHeaders.clientId;
                 makePairingCall(hostUrl, callback);
             }
 
             @Override
-            public void onJsonArrayResponse(JSONArray jsonArrayResponse, RelayHeaders relayHeaders) {
+            public void onJsonArrayResponse(NetworkResponse networkResponse, JSONArray jsonArrayResponse, RelayHeaders relayHeaders) {
                 callback.onError("Unexpected Volley jsonArrayResponse. Response: " + jsonArrayResponse.toString());
             }
 
             @Override
-            public void onByteArrayResponse(byte[] byteArrayResponse, RelayHeaders relayHeaders) {
+            public void onByteArrayResponse(NetworkResponse networkResponse, byte[] byteArrayResponse, RelayHeaders relayHeaders) {
                 callback.onError("Unexpected Volley byteArrayResponse. Response: " + Arrays.toString(byteArrayResponse));
             }
         });
@@ -516,22 +521,22 @@ public class Host {
                         null),
                 setRelayOptions(true,null)
         );
-        webHelper.sendJsonArray(connectionModel, null, new RWHResponseListener() {
+        webHelper.sendJsonArray(connectionModel, null, new NetworkResponseListener() {
 
             @Override
-            public void onError(int code, byte[] data, RelayHeaders relayHeaders) {
-                String errorMessage = "Code: " + code + " Message: Unable to pair with relay Server " + hostUrl;
+            public void onError(NetworkResponse networkResponse, byte[] data, RelayHeaders relayHeaders) {
+                String errorMessage = "Code: " + networkResponse.statusCode + " Message: Unable to pair with relay Server " + hostUrl;
                 LogHelper.error("HOST", errorMessage);
                 callback.onError(errorMessage);
             }
 
             @Override
-            public void onJsonResponse(JSONObject jsonResponse, RelayHeaders relayHeaders) {
+            public void onJsonResponse(NetworkResponse networkResponse, JSONObject jsonResponse, RelayHeaders relayHeaders) {
                 callback.onError("Unexpected Volley jsonArrayResponse. Response: " + jsonResponse.toString());
             }
 
             @Override
-            public void onJsonArrayResponse(JSONArray response, RelayHeaders relayHeaders) {
+            public void onJsonArrayResponse(NetworkResponse networkResponse, JSONArray response, RelayHeaders relayHeaders) {
                 hostClientId = relayHeaders.clientId;
 
                 String errorMessage;
@@ -568,7 +573,7 @@ public class Host {
             }
 
             @Override
-            public void onByteArrayResponse(byte[] byteArrayResponse, RelayHeaders relayHeaders) {
+            public void onByteArrayResponse(NetworkResponse networkResponse, byte[] byteArrayResponse, RelayHeaders relayHeaders) {
                 callback.onError("Unexpected Volley jsonArrayResponse. Response: " + Arrays.toString(byteArrayResponse));
             }
         });
@@ -596,11 +601,11 @@ public class Host {
     // endregion
 
     // region Proxy Private Methods
-    private InstantiateHostCallback createRePairCallback(RetryableRequestData requestData, RelayDataTaskListener listener) {
+    private InstantiateHostCallback createRePairCallback(RetryableRequestData requestData, RelayVolleyRequestListener listener) {
         return new InstantiateHostCallback() {
             @Override
             public void onError(String message) {
-                listener.onError(message, null);
+                listener.onError(null, message, null);
             }
 
             @Override
@@ -640,12 +645,12 @@ public class Host {
         return encryptedRouteResult;
     }
 
-    private <T> EncodeResult encryptBodyBytes(String pairId, Request<T> origRequest, RelayDataTaskListener listener) {
+    private <T> EncodeResult encryptBodyBytes(String pairId, Request<T> origRequest, RelayVolleyRequestListener listener) {
         byte[] origBody = new byte[0];
         try {
             origBody = origRequest.getBody();
         } catch (AuthFailureError e) {
-            listener.onError(e.getMessage(), null);
+            listener.onError(null, e.getMessage(), null);
         }
         if (origBody != null && origBody.length > 0) {
             LogHelper.info("HOST", "Encrypted Request Body");

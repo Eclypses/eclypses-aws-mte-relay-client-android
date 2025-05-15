@@ -10,10 +10,10 @@ public class PrevRequestData implements RetryableRequestData {
     final Host host;
     final Request<?> request;
     final String[] headersToEncrypt;
-    final RelayDataTaskListener listener;
+    final RelayVolleyRequestListener listener;
 
 
-    public PrevRequestData(Host host, Request<?> request, String[] headersToEncrypt, RelayDataTaskListener listener) {
+    public PrevRequestData(Host host, Request<?> request, String[] headersToEncrypt, RelayVolleyRequestListener listener) {
         this.host = host;
         this.request =  request;
         this.headersToEncrypt = headersToEncrypt;
@@ -32,7 +32,7 @@ public class PrevRequestData implements RetryableRequestData {
                      UnsupportedEncodingException |
                      AuthFailureError |
                      MalformedURLException e) {
-                this.listener.onError(e.getMessage(), null);
+                this.listener.onError(null, e.getMessage(), null);
             }
         });
         sendingTread.start();

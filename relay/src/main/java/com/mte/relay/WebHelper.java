@@ -80,14 +80,14 @@ public class WebHelper {
         return requestQueue;
     }
 
-    public <T> void sendJson(RelayConnectionModel connectionModel, Request<T> origRequest, RWHResponseListener listener) {
-
+    public <T> void sendJson(RelayConnectionModel connectionModel, Request<T> origRequest, NetworkResponseListener listener) {
+        final NetworkResponse[] networkResponse = {null};
         RelayHeaders responseHeaders = new RelayHeaders();
         JsonObjectRequest request = new JsonObjectRequest(
                 connectionModel.method,
                 connectionModel.url + connectionModel.route,
                 connectionModel.jsonPayload,
-                response -> listener.onJsonResponse(response,
+                response -> listener.onJsonResponse(networkResponse[0], response,
                         createNewRelayResponseHeaders(responseHeaders)
                 ), error -> processResponseError(error, responseHeaders, listener)) {
             @Override
@@ -98,6 +98,7 @@ public class WebHelper {
 
             @Override
             protected Response<JSONObject> parseNetworkResponse(NetworkResponse response) {
+                networkResponse[0] = response;
                 parseResponseHeaders(response, responseHeaders);
                 if (response.data == null || response.data.length == 0) {
                     return Response.success(null, HttpHeaderParser.parseCacheHeaders(response));
@@ -109,13 +110,14 @@ public class WebHelper {
         addToRequestQueue(request);
     }
 
-    public <T> void sendJsonArray(RelayConnectionModel connectionModel, Request<T> origRequest, RWHResponseListener listener) {
+    public <T> void sendJsonArray(RelayConnectionModel connectionModel, Request<T> origRequest, NetworkResponseListener listener) {
+        final NetworkResponse[] networkResponse = {null};
         RelayHeaders responseHeaders = new RelayHeaders();
         JsonArrayRequest request = new JsonArrayRequest(
                 connectionModel.method,
                 connectionModel.url + connectionModel.route,
                 connectionModel.jsonArrayPayload,
-                response -> listener.onJsonArrayResponse(response,
+                response -> listener.onJsonArrayResponse(networkResponse[0], response,
                         createNewRelayResponseHeaders(responseHeaders)
                 ), error -> processResponseError(error, responseHeaders, listener)) {
 
@@ -127,6 +129,7 @@ public class WebHelper {
 
             @Override
             protected Response<JSONArray> parseNetworkResponse(NetworkResponse response) {
+                networkResponse[0] = response;
                 parseResponseHeaders(response, responseHeaders);
                 if (response.data == null || response.data.length == 0) {
                     return Response.success(null, HttpHeaderParser.parseCacheHeaders(response));
@@ -138,7 +141,8 @@ public class WebHelper {
         addToRequestQueue(request);
     }
 
-    public <T> void sendBytes(RelayConnectionModel connectionModel, Request<T> origRequest, RWHResponseListener listener) {
+    public <T> void sendBytes(RelayConnectionModel connectionModel, Request<T> origRequest, NetworkResponseListener listener) {
+        final NetworkResponse[] networkResponse = {null};
         RelayHeaders responseHeaders = new RelayHeaders();
         Request<byte[]> relayRequest = new Request<byte[]>(
                 connectionModel.method,
@@ -146,7 +150,7 @@ public class WebHelper {
                 error -> processResponseError(error, responseHeaders, listener)) {
             @Override
             protected void deliverResponse(byte[] responseBytes) {
-                listener.onByteArrayResponse(responseBytes, responseHeaders);
+                listener.onByteArrayResponse(networkResponse[0], responseBytes, responseHeaders);
             }
 
             @Override
@@ -162,6 +166,7 @@ public class WebHelper {
 
             @Override
             protected Response<byte[]> parseNetworkResponse(NetworkResponse response) {
+                networkResponse[0] = response;
                 parseResponseHeaders(response, responseHeaders);
                 if (response.data == null || response.data.length == 0) {
                     return Response.success(null, HttpHeaderParser.parseCacheHeaders(response));
@@ -179,22 +184,22 @@ public class WebHelper {
     // endregion
 
     // region Private Methods
-    private void processResponseError(VolleyError error, RelayHeaders responseHeaders, RWHResponseListener listener) {
+    private void processResponseError(VolleyError error, RelayHeaders responseHeaders, NetworkResponseListener listener) {
         if (error == null) {
            return;
         }
         if (error.networkResponse != null && error.networkResponse.data != null) {
             parseResponseHeaders(error.networkResponse, responseHeaders);
-            listener.onError(error.networkResponse.statusCode,
+            listener.onError(error.networkResponse,
                     error.networkResponse.data,
                     responseHeaders);
         } else if (error.networkResponse != null) {
             parseResponseHeaders(error.networkResponse, responseHeaders);
-            listener.onError(error.networkResponse.statusCode,
+            listener.onError(error.networkResponse,
                     new byte[0],
                     responseHeaders);
         } else {
-            listener.onError(503,
+            listener.onError(null,
                     null,
                     new RelayHeaders());
         }
