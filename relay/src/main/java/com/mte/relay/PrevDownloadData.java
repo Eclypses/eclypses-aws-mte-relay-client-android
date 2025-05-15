@@ -20,7 +20,7 @@ public class PrevDownloadData implements RetryableRequestData {
             try {
                 host.downloadFile(reqProperties, listener);
             } catch (IOException e) {
-                listener.relayStreamResponse(false, "", e.getMessage(), null);
+                listener.relayStreamResponse(-1,false, "", e.getMessage(), null);
             }
         });
         sendingTread.start();
