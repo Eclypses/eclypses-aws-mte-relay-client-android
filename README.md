@@ -44,6 +44,7 @@ This AAR library provides the Java language Eclypses MteRelay Mobile Client libr
 - [Simple Streamed File Download request](#simple-streamed-file-download-request)
 - [RePair with Server](#repair-with-server)
 - [Adjust Relay Settings as Necessary](#adjust-relay-settings-as-necessary)
+- [Logging](#logging)
 - [Common Issues & Debugging](#common-issues--debugging)
 - [Contact Eclypses](#contact-eclypses)
 
@@ -112,38 +113,38 @@ relay.addToMteRequestQueue(request, headersToEncrypt, new RelayDataTaskListener(
 String[] headersToEncrypt = new String[] {"Content-Length"};
 
 // Without pathnamePrefix
-relay.addToMteRequestQueue(request, headersToEncrypt, new RelayDataTaskListener() {
+relay.addToMteRequestQueue(request, headersToEncrypt, new RelayVolleyRequestListener() {
     @Override
-    public void onError(String message, Map<String, List<String>> responseHeaders) {
+    public void onError(NetworkResponse networkResponse, String message, Map<String, List<String>> responseHeaders) {
         // Handle errors appropriately and response headers as necessary
     }
 
     @Override
-    public void onResponse(byte[] responseBytes, Map<String, List<String>> responseHeaders) {
+    public void onResponse(NetworkResponse networkResponse, byte[] responseBytes, Map<String, List<String>> responseHeaders) {
         // Returns the response body as a byte[], and the response headers as a Map  
     }
 
     @Override
-    public void onResponse(JSONObject responseJson, Map<String, List<String>> responseHeaders) {
+    public void onResponse(NetworkResponse networkResponse, JSONObject responseJson, Map<String, List<String>> responseHeaders) {
         // Returns the response body as a JSONObject, and the response headers as a Map 
     }
 });
 
 // With pathnamePrefix
 String pathnamePrefix = "<your-pathname-prefix>";
-relay.addToMteRequestQueue(request, headersToEncrypt, pathnamePrefix, new RelayDataTaskListener() {
+relay.addToMteRequestQueue(request, headersToEncrypt, pathnamePrefix, new RelayVolleyRequestListener() {
     @Override
-    public void onError(String message, Map<String, List<String>> responseHeaders) {
+    public void onError(NetworkResponse networkResponse, String message, Map<String, List<String>> responseHeaders) {
         // Handle errors appropriately and response headers as necessary
     }
 
     @Override
-    public void onResponse(byte[] responseBytes, Map<String, List<String>> responseHeaders) {
+    public void onResponse(NetworkResponse networkResponse, byte[] responseBytes, Map<String, List<String>> responseHeaders) {
         // Returns the response body as a byte[], and the response headers as a Map  
     }
 
     @Override
-    public void onResponse(JSONObject responseJson, Map<String, List<String>> responseHeaders) {
+    public void onResponse(NetworkResponse networkResponse, JSONObject responseJson, Map<String, List<String>> responseHeaders) {
         // Returns the response body as a JSONObject, and the response headers as a Map 
     }
 });
@@ -192,15 +193,15 @@ RelayFileRequestProperties reqProperties = new RelayFileRequestProperties(
    - an instance of `RelayStreamCompletionCallback`. // provides upload progress updates
    <br><br>
 ``` java
-relay.uploadFile(AppSettings.relayHosts[0], reqProperties, route, <optional pathnamePrefix>, new RelayStreamResponseListener() {
+relay.uploadFile(<RelayServerUrlPath>, reqProperties, route, <optional pathnamePrefix>, new RelayStreamResponseListener() {
    @Override
-   public void relayStreamResponse(boolean success, String message, String errorMessage, Map<String, List<String>> responseHeaders) {
+   public void relayStreamResponse(int statusCode, boolean success, String message, String errorMessage, Map<String, List<String>> responseHeaders) {
       // Handle response as necessary
    }
 }, new RelayStreamCompletionCallback() {
    @Override
    public void onProgressUpdate(int bytesCompleted, int totalBytes) {
-      // Handle progress u[dates as appropriate
+      // Handle progress updates as appropriate
    };
 };
 ```
@@ -225,9 +226,9 @@ RelayFileRequestProperties reqProperties = new RelayFileRequestProperties(
  <br><br>
 
 ``` java
-relay.downloadFile(AppSettings.relayHosts[0], reqProperties, <optional pathnamePrefix>, new RelaystreamResponseListener() {
+relay.downloadFile(<RelayServerUrlPath>, reqProperties, <optional pathnamePrefix>, new RelaystreamResponseListener() {
    @Override
-   public void relayStreamResponse(boolean success, String message, String errorMessage, Map<String, List<String>> responseHeaders) {
+   public void relayStreamResponse(int statusCode, boolean success, String message, String errorMessage, Map<String, List<String>> responseHeaders) {
       // Handle response as necessary
    }
 });
@@ -243,7 +244,7 @@ relay.downloadFile(AppSettings.relayHosts[0], reqProperties, <optional pathnameP
 <br><br>
 
 ``` java
-relay.rePairWithRelayServer(relayServerPath, <optional pathnamePrefix>);
+relay.rePairWithRelayServer(<RelayServerUrlPath>, <optional pathnamePrefix>);
 // Responses will be received via relayResponseListener parameter passed in Relay Instantiation
 ```
 
@@ -261,13 +262,33 @@ relay.rePairWithRelayServer(relayServerPath, <optional pathnamePrefix>);
    boolean persistPair = true; // Defaults to false on each Relay instantiation
 
    String result = relay.adjustRelaySettings(
-                AppSettings.relayHost,
+                <RelayServerUrlPath>,
                 pathnamePrefix, // (if required by your infrastructure)
                 newStreamChunkSize,
                 newPairPoolSize,
                 persistPairs);
 ```
 
+# Logging
+- Logging to LogCat is enabled by default. LogToFile is disabled by default but can be enabled at runtime with this static method.
+```java
+Relay.enableFileLogging(
+                <RelayServerUrlPath>,
+                <optional pathnamePrefix>, // (if required by your infrastructure)
+                isEnabled); // boolean to enable or disable file logging.
+```
+- Read Log File Contents
+``` java
+String fileContents = Relay.readLogFile(
+                <RelayServerUrlPath>,
+                <optional pathnamePrefix>); // (if required by your infrastructure)
+```
+- Clear Log File Contents
+``` java
+String fileContents = Relay.clearLogFile(
+                <RelayServerUrlPath>,
+                <optional pathnamePrefix>); // (if required by your infrastructure)
+```
 <br><br>
 
 # Common Issues & Debugging

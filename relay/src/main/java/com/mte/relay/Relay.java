@@ -66,7 +66,7 @@ public class Relay {
         relayResponseListener = listener;
 
         // Set FileLogging to the default state
-        LogHelper.setFileLoggingEnabled(LogHelper.isFileLoggingEnabled());
+        LogHelper.enableFileLogging(LogHelper.isFileLoggingEnabled());
     }
     // endregion
 
@@ -260,17 +260,34 @@ public class Relay {
         return responseMessage;
     }
 
-    public static void setFileLoggingEnabled(Boolean isEnabled) {
-        LogHelper.trace("Relay", "Setting FileLogging to " + isEnabled);
-        LogHelper.setFileLoggingEnabled(isEnabled);
+    public static void enableFileLogging(String serverUrl,
+                                             Boolean isEnabled) {
+        enableFileLogging(serverUrl, null, isEnabled);
     }
 
-    public static String readLogFile() {
+    public static void enableFileLogging(String serverUrl,
+                                             String pathnamePrefix,
+                                             Boolean isEnabled) {
+        LogHelper.trace("Relay", "Setting FileLogging to " + isEnabled);
+        LogHelper.enableFileLogging(isEnabled);
+    }
+
+    public static String readLogFile(String serverUrl) {
+        return readLogFile(serverUrl, null);
+    }
+
+    public static String readLogFile(String serverUrl,
+                                     String pathnamePrefix) {
         LogHelper.trace("Relay", "Reading Log File");
         return LogHelper.readLogFileContents();
     }
 
-    public static void clearLogFile() {
+    public static void clearLogFile(String serverUrl) {
+        clearLogFile(serverUrl, null);
+    }
+
+    public static void clearLogFile(String serverUrl,
+                                    String pathnamePrefix) {
         LogHelper.trace("Relay", "Clearing log file");
         LogHelper.clearLogFileContents();
     }
