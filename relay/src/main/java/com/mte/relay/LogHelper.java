@@ -100,7 +100,7 @@ public class LogHelper {
      * Do not manually implement file rotation or max file size here.
      * See logback.xml for log rotation configuration.
      */
-    public static void setFileLoggingEnabled(boolean enabled) {
+    public static void enableFileLogging(boolean enabled) {
         isFileLoggingEnabled = enabled;
 
         LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
