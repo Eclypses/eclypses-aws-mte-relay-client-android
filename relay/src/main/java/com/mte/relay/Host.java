@@ -465,7 +465,13 @@ public class Host {
 
             @Override
             public void onError(NetworkResponse networkResponse, byte[] data, RelayHeaders relayHeaders) {
-                String errorMessage = "Code: " + networkResponse.statusCode + " Message: Unable to locate Relay Server at " + hostUrl;
+                int statusCode;
+                if (networkResponse != null) {
+                    statusCode =  networkResponse.statusCode;
+                } else {
+                    statusCode = 503;
+                }
+                String errorMessage = "Code: " + statusCode + " Message: Unable to locate Relay Server at " + hostUrl;
                 LogHelper.error("HOST", errorMessage);
                 callback.onError(errorMessage);
             }
