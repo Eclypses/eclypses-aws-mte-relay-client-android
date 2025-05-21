@@ -1,5 +1,19 @@
 All notable changes to this project will be documented in this file.
 
+## [4.1.1] - 2025-05-21
+
+### Added
+
+### Changed
+- Bumped Version
+- Updated README.md
+
+### Fixed
+- Updated Host.java to return a 503 statusCode if RelayServerUrl is bad and we don't get a NetworkResponse from Volley.
+
+[4.1.1]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/4.1.1
+<br><br>
+
 ## [4.1.0] - 2025-05-16
 
 ### Added
