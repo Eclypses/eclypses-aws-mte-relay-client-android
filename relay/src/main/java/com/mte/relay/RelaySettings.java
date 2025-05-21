@@ -26,7 +26,7 @@ package com.mte.relay;
 
 class RelaySettings {
 
-    static String relayVersion = "4.1.0";
+    static String relayVersion = "4.1.1";
     static int streamChunkSize = 65536;
     static final String licenseCompanyName = "Eclypses Inc";
     static final String licenseKey = "9eHOohOm/GwY01xbvNTL9B+1";
