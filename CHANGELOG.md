@@ -1,5 +1,19 @@
 All notable changes to this project will be documented in this file.
 
+## [4.2.0] - 2025-08-21
+
+### Added
+- Added public method to process an OkHttp Request/Response  
+
+### Changed
+- Bumped Version
+- Updated README.md
+
+### Fixed
+
+[4.2.0]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/4.2.0
+<br><br>
+
 ## [4.1.1] - 2025-05-21
 
 ### Added

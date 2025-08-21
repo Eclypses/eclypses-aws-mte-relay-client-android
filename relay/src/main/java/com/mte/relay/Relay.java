@@ -35,6 +35,8 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
+import okhttp3.HttpUrl;
+
 @SuppressWarnings("unused") // All public methods are called externally
 public class Relay {
 
@@ -97,6 +99,50 @@ public class Relay {
                     @Override
                     public void hostInstantiated(String hostUrl, Host host) {
                         host.sendRequest(req, headersToEncrypt, listener);
+                    }
+                });
+    }
+
+    public void send(okhttp3.Request req, String[] headersToEncrypt, RelayOkHttpRequestListener listener) {
+        send(req, headersToEncrypt, null, listener);
+    }
+
+    public void send(okhttp3.Request req, String[] headersToEncrypt, String pathnamePrefix, RelayOkHttpRequestListener listener) {
+        String relayServerPath;
+        HttpUrl url = req.url();
+        relayServerPath = url.scheme() + "://" + url.host();
+        if (url.port() != HttpUrl.defaultPort(url.scheme())) {
+            relayServerPath += ":" + url.port();
+        }
+        getHost(buildHostUrl(relayServerPath, pathnamePrefix),
+                new InstantiateHostCallback() {
+                    @Override
+                    public void onError(String message) {
+                        LogHelper.error("Relay",message);
+                        okhttp3.Response errorResponse = OkHttpToVolleyConverter.convertErrorToOkHttpResponse(
+                                req,
+                                message,
+                                500, // synthetic status code for internal errors
+                                "application/json"
+                        );
+                        listener.onError(errorResponse);
+                    }
+
+                    @Override
+                    public void hostInstantiated(String hostUrl, Host host) {
+                        LogHelper.trace("Relay", "Sending OkHttp Request");
+                        try {
+                            host.sendOkHttpRequest(req, headersToEncrypt, listener);
+                        } catch (IOException e) {
+                            LogHelper.error("Relay",e.getMessage());
+                            okhttp3.Response errorResponse = OkHttpToVolleyConverter.convertErrorToOkHttpResponse(
+                                    req,
+                                    e.getMessage(),
+                                    500, // synthetic status code for internal errors
+                                    "application/json"
+                            );
+                            listener.onError(errorResponse);
+                        }
                     }
                 });
     }
