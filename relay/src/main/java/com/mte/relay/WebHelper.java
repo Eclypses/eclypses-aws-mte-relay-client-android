@@ -41,7 +41,9 @@ import com.android.volley.toolbox.Volley;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -228,22 +230,26 @@ public class WebHelper {
         if (response == null || response.allHeaders == null) {
             return;
         }
+
+        List<Header> filteredHeaders = new ArrayList<>();
+
         for (Header header : response.allHeaders) {
             if (header.getName().equals(Constants.X_MTE_RELAY_KEY)) {
                 RelayOptions relayOptions = RelayOptions.parseMteRelayHeader(header.getValue());
-                if (relayOptions == null) {
-                    continue;
+                if (relayOptions != null) {
+                    responseHeaders.clientId = relayOptions.clientId;
+                    responseHeaders.pairId = relayOptions.pairId;
+                    responseHeaders.encoderType = relayOptions.encodeType;
                 }
-                responseHeaders.clientId = relayOptions.clientId;
-                responseHeaders.pairId = relayOptions.pairId;
-                responseHeaders.encoderType = relayOptions.encodeType;
-                continue;
-            }
-            if (header.getName().equals(Constants.X_MTE_RELAY_EH_KEY)) {
+            } else if (header.getName().equals(Constants.X_MTE_RELAY_EH_KEY)) {
                 responseHeaders.encryptedDecryptedHeaders = header.getValue();
+            } else {
+                // Only add headers we don’t consume
+                filteredHeaders.add(header);
             }
         }
-        responseHeaders.responseHeaderList = response.allHeaders;
+
+        responseHeaders.responseHeaderList = filteredHeaders;
     }
 
     private static RelayHeaders createNewRelayResponseHeaders(RelayHeaders responseHeaders) {

@@ -48,6 +48,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+
 public class Host {
 
     // region Class Variables
@@ -160,6 +161,48 @@ public class Host {
             }
         });
         sendingTread.start();
+    }
+
+    public <T> void sendOkHttpRequest(okhttp3.Request req, String[] headersToEncrypt, RelayOkHttpRequestListener listener) throws IOException {
+
+        Request<T> volleyReq = OkHttpToVolleyConverter.convert(req);
+        try {
+            sendUpdatedRequest(volleyReq, headersToEncrypt, new RelayVolleyRequestListener() {
+                @Override
+                public void onError(NetworkResponse networkResponse, String errorMessage, Map<String, List<String>> responseHeaders) {
+                    LogHelper.error("Host",errorMessage);
+                    okhttp3.Response okHttpResponse = OkHttpToVolleyConverter.convertVolleyToOkHttpResponse(
+                            networkResponse,
+                            errorMessage.getBytes(StandardCharsets.UTF_8),
+                            responseHeaders,
+                            req,
+                            "application/json"
+                    );
+                    listener.onError(okHttpResponse);
+                }
+
+                @Override
+                public void onResponse(NetworkResponse networkResponse, byte[] responseBytes, Map<String, List<String>> responseHeaders) {
+                    okhttp3.Response okHttpResponse = OkHttpToVolleyConverter.convertVolleyToOkHttpResponse(
+                            networkResponse,
+                            responseBytes,
+                            responseHeaders,
+                            req,
+                            "application/json"
+                    );
+                    listener.onResponse(okHttpResponse);
+                }
+            });
+        } catch (InterruptedException | AuthFailureError | MalformedURLException | UnsupportedEncodingException e) {
+            LogHelper.error("Host",e.getMessage());
+            okhttp3.Response errorResponse = OkHttpToVolleyConverter.convertErrorToOkHttpResponse(
+                    req,
+                    e.getMessage(),
+                    500, // synthetic status code for internal errors
+                    "application/json"
+            );
+            listener.onError(errorResponse);
+        }
     }
 
     synchronized public void uploadFile(RelayFileRequestProperties reqProperties,

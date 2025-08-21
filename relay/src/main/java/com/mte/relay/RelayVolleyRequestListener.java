@@ -37,5 +37,4 @@ public interface RelayVolleyRequestListener {
 
     void onResponse(NetworkResponse networkResponse, byte[] responseBytes, Map<String, List<String>> responseHeaders);
 
-    void onResponse(NetworkResponse networkResponse, JSONObject responseJson, Map<String, List<String>> responseHeaders);
 }
