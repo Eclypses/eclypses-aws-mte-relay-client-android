@@ -40,6 +40,7 @@ This AAR library provides the Java language Eclypses MteRelay Mobile Client libr
 # Table of Contents
 - [Getting Started](#getting-started)
 - [Simple Volley GET and POST requests](#simple-volley-get-and-post-requests)
+- [Simple OkHttp GET and POST requests](#simple-okhttp-get-and-post-requests)
 - [Simple Streamed File Upload request](#simple-streamed-file-upload-request)
 - [Simple Streamed File Download request](#simple-streamed-file-download-request)
 - [RePair with Server](#repair-with-server)
@@ -150,6 +151,52 @@ relay.addToMteRequestQueue(request, headersToEncrypt, pathnamePrefix, new RelayV
 });
 ```
 <br><br>
+
+ # Simple OkHttp GET and POST requests
+   
+- When creating your OkHttp request, instead of adding your original server Url, add the url (Scheme and authority, i.e. https://myRelayServer/) of the Relay Server that you are targeting. 
+- Then, after creating your OkHttp request using client.newCall(request).enqueue(new Callback(), instead, call `relay.send(_,_,_,_)`, passing ...
+   - the request object, 
+   - a String[] of the names of any HTTP headers you wish to have protected by MTE, 
+   - Optionally,  pathnamePrefix, if required by your infrastructure,
+   - and a new RelayOkHttpRequestListener.
+
+   <br><br>
+``` java
+String[] headersToEncrypt = new String[] {"Content-Length"};
+
+// Without pathnamePrefix
+relay.send(request, headersToEncrypt, new RelayOkHttpRequestListener() {
+
+        @Override
+        public void onError(Response response) {
+           // Handle errors appropriately and response headers as necessary
+        }
+
+        @Override
+        public void onResponse(Response response) {
+             // Handle Response as appropriate
+        }
+});
+
+// With pathnamePrefix
+String pathnamePrefix = "<your-pathname-prefix>";
+
+relay.send(request, headersToEncrypt, pathnamePrefix, new RelayOkHttpRequestListener() {
+
+        @Override
+        public void onError(Response response) {
+           // Handle errors appropriately and response headers as necessary
+        }
+
+        @Override
+        public void onResponse(Response response) {
+            // Handle Response as appropriate
+        }
+});
+```
+<br><br>
+
 
 # Simple Streamed File Upload request
 
