@@ -145,6 +145,10 @@ public final class OkHttpToVolleyConverter {
             okhttp3.Request originalRequest,
             String bodyType
     ) {
+        if (volleyResponse == null) {
+            return convertErrorToOkHttpResponse(originalRequest, "No Response Received", 0, null);
+        }
+
         // Determine media type
         MediaType mediaType = null;
         if (volleyResponse.headers != null) {
