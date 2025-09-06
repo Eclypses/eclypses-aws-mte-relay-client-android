@@ -377,11 +377,15 @@ public class Host {
         webHelper.sendBytes(relayConnectionModel, origRequest, new NetworkResponseListener() {
             @Override
             public void onError(NetworkResponse networkResponse, byte[] data, RelayHeaders relayHeaders) {
-                if (NetworkUtils.shouldRePairWithHost(networkResponse.statusCode, prevRequestData)) {
+                if (networkResponse == null) {
+                    String errorMessage = "No networkResponse received";
+                    LogHelper.error("HOST", errorMessage);
+                    listener.onError(null, errorMessage, null);
+                } else if (NetworkUtils.shouldRePairWithHost(networkResponse.statusCode, prevRequestData)) {
                     rePairWithHost(createRePairCallback(prevRequestData, listener));
                 } else {
                     Map<String, List<String>> processedHeaders = new HashMap<>();
-                    String responseString = "Status Code: " + networkResponse + " ";
+                    String responseString = "Status Code: " + networkResponse.statusCode + " ";
                     LogHelper.error("HOST", responseString);
                     try {
                         for (Header header : relayHeaders.responseHeaderList) {

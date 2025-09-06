@@ -1,5 +1,18 @@
 All notable changes to this project will be documented in this file.
 
+## [4.2.1] - 2025-09-05
+
+### Added
+- Added public method to process an OkHttp Request/Response
+
+### Changed
+- Bumped Version
+
+### Fixed
+- Updated Host class to gracefully handle missing Volley Response
+
+[4.2.1]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/4.2.1
+
 ## [4.2.0] - 2025-08-21
 
 ### Added
