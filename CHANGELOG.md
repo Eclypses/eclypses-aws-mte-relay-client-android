@@ -1,5 +1,17 @@
 All notable changes to this project will be documented in this file.
 
+## [4.2.2] - 2025-09-05
+
+### Added
+
+### Changed
+- Added functionality to return error information when a VolleyResponse contains no NetworkResponse
+- Bumped Version
+
+### Fixed
+
+[4.2.2]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/4.2.2
+
 ## [4.2.1] - 2025-09-05
 
 ### Added

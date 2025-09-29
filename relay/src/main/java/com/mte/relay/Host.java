@@ -378,7 +378,12 @@ public class Host {
             @Override
             public void onError(NetworkResponse networkResponse, byte[] data, RelayHeaders relayHeaders) {
                 if (networkResponse == null) {
-                    String errorMessage = "No networkResponse received";
+                    String errorMessage;
+                    if (data.length > 0) {
+                        errorMessage = new String(data, StandardCharsets.UTF_8);
+                    } else {
+                        errorMessage = "No networkResponse received";
+                    }
                     LogHelper.error("HOST", errorMessage);
                     listener.onError(null, errorMessage, null);
                 } else if (NetworkUtils.shouldRePairWithHost(networkResponse.statusCode, prevRequestData)) {
