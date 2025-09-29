@@ -41,6 +41,7 @@ import com.android.volley.toolbox.Volley;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -188,6 +189,9 @@ public class WebHelper {
     // region Private Methods
     private void processResponseError(VolleyError error, RelayHeaders responseHeaders, NetworkResponseListener listener) {
         if (error == null) {
+            listener.onError(null,
+                    null,
+                    new RelayHeaders());
            return;
         }
         if (error.networkResponse != null && error.networkResponse.data != null) {
@@ -201,8 +205,18 @@ public class WebHelper {
                     new byte[0],
                     responseHeaders);
         } else {
+            String errorMessage;
+            if (error.getCause() != null) {
+                errorMessage = error.getCause().toString();
+            } else if (error.getMessage() != null) {
+                errorMessage = error.getMessage();
+            } else {
+                errorMessage = error.getClass().getSimpleName();
+            }
+
+            byte[] errorBytes = errorMessage.getBytes(StandardCharsets.UTF_8);
             listener.onError(null,
-                    null,
+                    errorBytes,
                     new RelayHeaders());
         }
     }
