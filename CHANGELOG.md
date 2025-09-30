@@ -1,5 +1,17 @@
 All notable changes to this project will be documented in this file.
 
+## [4.2.3] - 2025-09-30
+
+### Added
+
+### Changed
+- Corrected the way an eror message is returned in a Volley Response
+- Bumped Version
+
+### Fixed
+
+[4.2.3]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/4.2.3
+
 ## [4.2.2] - 2025-09-05
 
 ### Added

@@ -377,8 +377,8 @@ public class Host {
         webHelper.sendBytes(relayConnectionModel, origRequest, new NetworkResponseListener() {
             @Override
             public void onError(NetworkResponse networkResponse, byte[] data, RelayHeaders relayHeaders) {
+                String errorMessage = "";
                 if (networkResponse == null) {
-                    String errorMessage;
                     if (data.length > 0) {
                         errorMessage = new String(data, StandardCharsets.UTF_8);
                     } else {
@@ -390,8 +390,6 @@ public class Host {
                     rePairWithHost(createRePairCallback(prevRequestData, listener));
                 } else {
                     Map<String, List<String>> processedHeaders = new HashMap<>();
-                    String responseString = "Status Code: " + networkResponse.statusCode + " ";
-                    LogHelper.error("HOST", responseString);
                     try {
                         for (Header header : relayHeaders.responseHeaderList) {
                             processedHeaders.put(header.getName(), Collections.singletonList(header.getValue()));
@@ -402,18 +400,18 @@ public class Host {
                                 data.length != 0) {
                             bodyDecodeResult = mteHelper.decode(relayHeaders.pairId, data);
                             if (bodyDecodeResult.decodedBytes != null) {
-                                responseString = responseString + new String(bodyDecodeResult.decodedBytes, StandardCharsets.UTF_8);
+                                errorMessage = new String(bodyDecodeResult.decodedBytes, StandardCharsets.UTF_8);
                             }
                             try {
                                 conditionallyStoreStates();
                             } catch (JSONException e) {
-                                responseString = responseString + e.getMessage();
+                                errorMessage = e.getMessage();
                             }
                         }
                     } catch (MteException e) {
-                        responseString = responseString + e.getMessage();
+                        errorMessage = e.getMessage();
                     }
-                    listener.onError(networkResponse, responseString, processedHeaders);
+                    listener.onError(networkResponse, errorMessage, processedHeaders);
                 }
             }
 
