@@ -24,39 +24,19 @@
 
 package com.mte.relay;
 
+import com.android.volley.NetworkResponse;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.Map;
+public interface NetworkResponseListener {
 
-public class RelayConnectionModel {
-    final String url;
-    final int method;
-    final String route;
-    final JSONObject jsonPayload;
-    final JSONArray jsonArrayPayload;
-    final byte[] bytesPayload;
-    final Map<String, String> origHeaders;
-    final RelayHeaders relayHeaders;
-    final RelayOptions relayOptions;
+    void onError(NetworkResponse networkResponse, byte[] errorResponseData, RelayHeaders relayHeaders);
 
-    public RelayConnectionModel(String url,
-                                int method,
-                                String route,
-                                JSONObject jsonPayload,
-                                JSONArray jsonArrayPayload,
-                                byte[] bytesPayload,
-                                Map<String, String> origHeaders,
-                                RelayHeaders relayHeaders,
-                                RelayOptions relayOptions) {
-        this.url = url;
-        this.method = method;
-        this.route = route;
-        this.jsonPayload = jsonPayload;
-        this.jsonArrayPayload = jsonArrayPayload;
-        this.bytesPayload = bytesPayload;
-        this.origHeaders = origHeaders;
-        this.relayHeaders = relayHeaders;
-        this.relayOptions = relayOptions;
-    }
+    void onJsonResponse(NetworkResponse networkResponse, JSONObject jsonResponseData, RelayHeaders relayHeaders);
+
+    void onJsonArrayResponse(NetworkResponse networkResponse, JSONArray jsonArrayResponseData, RelayHeaders relayHeaders);
+
+    void onByteArrayResponse(NetworkResponse networkResponse, byte[] byteArrayResponseData, RelayHeaders relayHeaders);
+
 }

@@ -24,37 +24,44 @@
 
 package com.mte.relay;
 
-import java.io.File;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class RelayFileRequestProperties {
 
-    public File file;
-    public String filename;
+    // region Class Variables
+    public final String serverPath;
     public String route;
     public String downloadPath;
     public RelayStreamCallback relayStreamCallback;
 
-    public Map<String,String> origHeaders;
-    public String[] headersToEncrypt;
+    public final Map<String,String> origHeaders;
+    public final String[] headersToEncrypt;
+    // endregion
 
-    public RelayFileRequestProperties(File file, Map origHeaders, String[] headersToEncrypt, RelayStreamCallback relayStreamCallback) {
-        this.file = file;
+    // region Constructors
+    // Constructor is required in calling app
+    public RelayFileRequestProperties(String serverPath,
+                                      Map<String,String> origHeaders,
+                                      String[] headersToEncrypt,
+                                      RelayStreamCallback relayStreamCallback) {
+        this.serverPath = serverPath;
         this.origHeaders = origHeaders;
         this.headersToEncrypt = headersToEncrypt;
         this.relayStreamCallback = relayStreamCallback;
     }
 
-    public RelayFileRequestProperties(String filename,
+    // Constructor is required in calling app
+    public RelayFileRequestProperties(String serverPath,
                                       String route,
                                       String downloadPath,
                                       Map<String, String> origHeaders,
                                       String[] headersToEncrypt) {
-        this.filename = filename;
+        this.serverPath = serverPath;
         this.route = route;
         this.downloadPath = downloadPath;
         this.origHeaders = origHeaders;
         this.headersToEncrypt = headersToEncrypt;
     }
+    // endregion
+
 }

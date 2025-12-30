@@ -40,16 +40,18 @@
     import java.security.NoSuchAlgorithmException;
     import java.util.HashMap;
     import java.util.Map;
+    import java.util.Objects;
 
     import javax.crypto.SecretKey;
 
     public class HostStorageHelper {
 
-        Context ctx;
+        final Context ctx;
         SecretKey secretKey;
-        String  host, encryptedHostFilename;
+        final String  host;
+        final String encryptedHostFilename;
         boolean foundStoredHost = false;
-        Map<String, String> storedHosts = new HashMap<>(1);
+        final Map<String, String> storedHosts = new HashMap<>(1);
         boolean storageInstantiated = false;
         KeyHelper keyHelper;
 
@@ -66,8 +68,6 @@
                 } catch (InterruptedException e) {
                     throw new RelayException(getClass().getSimpleName(),
                             "Load Stored Host Exception: Error: " + e.getMessage());
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
                 }
             });
             loadStoredPairsThread.start();
@@ -94,21 +94,28 @@
             notify();
         }
 
-        synchronized private void loadStoredHosts(HostStorageHelperCallback callback) throws InterruptedException, IOException {
+        synchronized private void loadStoredHosts(HostStorageHelperCallback callback) throws InterruptedException {
             while (!storageInstantiated) {
                 wait();
             }
             try {
-                String jsonStr = readHostFromFile();
-                if (jsonStr != null) {
-                    storedHosts.put(host, jsonStr);
+                String storedHostStr = readHostFromFile();
+                if (Objects.equals(storedHostStr, "")) {
+                    callback.noStoredPairs();
+                    return;
+                }
+                JSONObject storedPairs = new JSONObject(storedHostStr);
+                String clientId = storedPairs.getString("clientId");
+                String pairMapStates = storedPairs.optString("pairMapStates", "");
+                if (pairMapStates.isEmpty()) {
+                    callback.foundClientId(clientId);
+                } else {
+                    storedHosts.put(host, storedHostStr);
                     foundStoredHost = true;
                     callback.foundStoredPairs(storedHosts.get(host));
-                } else {
-                    callback.noStoredPairs();
                 }
-            } catch (RelayException e) {
-                callback.noStoredPairs();
+            } catch (JSONException e) {
+                callback.onError(e.getMessage());
             }
         }
 
@@ -116,11 +123,15 @@
             return storedHosts.get(host);
         }
 
-        void removeStoredHost() throws IOException, JSONException {
+        void removeStoredHost() throws JSONException {
             String storedHostStr = readHostFromFile();
+
+            // If there is no file for this host, just return.
+            if (Objects.equals(storedHostStr, "")) {
+                return;
+            }
             JSONObject stateToStore = new JSONObject(storedHostStr);
-            stateToStore
-                    .put("pairMapStates", "");
+            stateToStore.put("pairMapStates", "");
             saveHostToFile(stateToStore.toString());
         }
 
@@ -155,8 +166,7 @@
                 fileInputStream.close();
                 return decrypted;
             } catch (Exception e) {
-                throw new RelayException(getClass().getSimpleName(),
-                        "Unable to retrieve stored Host: Error: " + e.getMessage());
+                return "";
             }
         }
 

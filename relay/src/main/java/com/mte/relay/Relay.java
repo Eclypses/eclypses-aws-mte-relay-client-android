@@ -29,88 +29,385 @@ import android.content.Context;
 import com.android.volley.Request;
 import com.eclypses.mte.MteBase;
 
-import org.json.JSONObject;
-
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
+import okhttp3.HttpUrl;
+
+@SuppressWarnings("unused") // All public methods are called externally
 public class Relay {
 
-    private static String[] relayHosts;
+    // region Class Variables
     private static Relay instance;
-    private final Map<String, Host> hosts;
+    private final Map<String, Host> pairedHosts = new HashMap<>();
+    private final Context ctx;
+    private final RelayResponseListener relayResponseListener;
+    // endregion
 
-    public static Relay getInstance(Context context, String[] relayHosts) throws IOException {
+    // region Constructors
+    public static Relay getInstance(Context context, RelayResponseListener listener) {
         if (instance == null) {
-            instance = new Relay(context, relayHosts);
+            System.setProperty("LOG_DIR", context.getFilesDir().getAbsolutePath());
+            LogHelper.trace("Relay", "Logging initialized.");
+            instance = new Relay(context, listener);
         }
         return instance;
     }
 
-    private Relay(Context context, String[] relayHosts) throws IOException {
-        this.relayHosts = relayHosts;
-        if (!MteBase.initLicense(Settings.licenseCompanyName, Settings.licenseKey)) {
+    private Relay(Context context, RelayResponseListener listener) {
+        if (!MteBase.initLicense(RelaySettings.licenseCompanyName, RelaySettings.licenseKey)) {
+            String errorMessage = "MTE License Check Failed";
+            LogHelper.error("Relay", errorMessage);
             throw new RelayException(getClass().getSimpleName(), "MTE License Check Failed");
         }
-        hosts = new HashMap<>();
-        for (String host : relayHosts) {
-            Host h = new Host(context, host);
-            hosts.put(host, h);
+        LogHelper.info("Relay", "Using Relay Version " + RelaySettings.relayVersion + " and Mte Version " + MteBase.getVersion());
+        ctx = context;
+        relayResponseListener = listener;
+
+        // Set FileLogging to the default state
+        LogHelper.enableFileLogging(LogHelper.isFileLoggingEnabled());
+    }
+    // endregion
+
+    // region Public Methods
+    public <T> void addToMteRequestQueue(Request<T> req, String[] headersToEncrypt, RelayVolleyRequestListener listener) {
+        addToMteRequestQueue(req, headersToEncrypt, null, listener);
+    }
+
+    public <T> void addToMteRequestQueue(Request<T> req, String[] headersToEncrypt, String pathnamePrefix, RelayVolleyRequestListener listener) {
+        LogHelper.trace("Relay", "Volley Request added to Queue");
+        String relayServerPath = null;
+        try {
+            URL relayServerUrl = new URL(req.getUrl());
+            String protocol = relayServerUrl.getProtocol();
+            String authority = relayServerUrl.getAuthority();
+            relayServerPath = protocol + "://" + authority;
+        } catch (MalformedURLException e) {
+            LogHelper.error("Relay", e.getMessage());
+            listener.onError(null, e.getMessage(), null);
+        }
+        getHost(buildHostUrl(relayServerPath, pathnamePrefix),
+                new InstantiateHostCallback() {
+                    @Override
+                    public void onError(String message) {
+                        LogHelper.error("Relay",message);
+                        listener.onError(null, message, null); }
+
+                    @Override
+                    public void hostInstantiated(String hostUrl, Host host) {
+                        host.sendRequest(req, headersToEncrypt, listener);
+                    }
+                });
+    }
+
+    public void send(okhttp3.Request req, String[] headersToEncrypt, RelayOkHttpRequestListener listener) {
+        send(req, headersToEncrypt, null, listener);
+    }
+
+    public void send(okhttp3.Request req, String[] headersToEncrypt, String pathnamePrefix, RelayOkHttpRequestListener listener) {
+        String relayServerPath;
+        HttpUrl url = req.url();
+        relayServerPath = url.scheme() + "://" + url.host();
+        if (url.port() != HttpUrl.defaultPort(url.scheme())) {
+            relayServerPath += ":" + url.port();
+        }
+        getHost(buildHostUrl(relayServerPath, pathnamePrefix),
+                new InstantiateHostCallback() {
+                    @Override
+                    public void onError(String message) {
+                        LogHelper.error("Relay",message);
+                        okhttp3.Response errorResponse = OkHttpToVolleyConverter.convertErrorToOkHttpResponse(
+                                req,
+                                message,
+                                500, // synthetic status code for internal errors
+                                "application/json"
+                        );
+                        listener.onError(errorResponse);
+                    }
+
+                    @Override
+                    public void hostInstantiated(String hostUrl, Host host) {
+                        LogHelper.trace("Relay", "Sending OkHttp Request");
+                        try {
+                            host.sendOkHttpRequest(req, headersToEncrypt, listener);
+                        } catch (IOException e) {
+                            LogHelper.error("Relay",e.getMessage());
+                            okhttp3.Response errorResponse = OkHttpToVolleyConverter.convertErrorToOkHttpResponse(
+                                    req,
+                                    e.getMessage(),
+                                    500, // synthetic status code for internal errors
+                                    "application/json"
+                            );
+                            listener.onError(errorResponse);
+                        }
+                    }
+                });
+    }
+
+    public void uploadFile(RelayFileRequestProperties reqProperties,
+                           String route,
+                           RelayStreamResponseListener listener,
+                           RelayStreamCompletionCallback completionCallback) {
+        uploadFile(reqProperties, route, null, listener, completionCallback);
+    }
+
+    public void uploadFile(RelayFileRequestProperties reqProperties,
+                           String route,
+                           String pathnamePrefix,
+                           RelayStreamResponseListener listener,
+                           RelayStreamCompletionCallback completionCallback) {
+        LogHelper.trace("Relay", "Uploading File");
+        try {
+            getHost(buildHostUrl(reqProperties.serverPath, pathnamePrefix),
+                    new InstantiateHostCallback() {
+                        @Override
+                        public void onError(String message) {
+                            LogHelper.error("Relay", message);
+                            listener.relayStreamResponse(
+                                    -1,
+                                false,
+                                null,
+                                message,
+                                null); }
+
+                        @Override
+                        public void hostInstantiated(String hostUrl, Host host) {
+                            host.uploadFile(reqProperties, route, listener, completionCallback);
+                        }
+                    });
+        } catch (RelayException e) {
+            relayResponseListener.onCompletion(false, e.getMessage());
         }
     }
 
-    public <T> void addToMteRequestQueue(Request<T> req, String[] headersToEncrypt, RelayResponseListener listener) {
-        Host host = hosts.get(resolveHost());
-        Objects.requireNonNull(host).sendRequest(req, headersToEncrypt, new RelayResponseListener() {
-            @Override
-            public void onError(String message) {
-                listener.onError(message);
-            }
-
-            @Override
-            public void onResponse(byte[] responseBytes, Map<String, List<String>> responseHeaders) {
-                listener.onResponse(responseBytes, responseHeaders);
-            }
-
-            @Override
-            public void onResponse(JSONObject responseJson, Map<String, List<String>> responseHeaders) {
-                listener.onResponse(responseJson, responseHeaders);
-            }
-        });
+    public void downloadFile(RelayFileRequestProperties reqProperties, RelayStreamResponseListener listener) {
+        downloadFile(reqProperties, null, listener);
     }
 
-    public void uploadFile(RelayFileRequestProperties reqProperties, String route, RelayResponseListener listener) {
-        Host host = hosts.get(resolveHost());
-        host.uploadFile(reqProperties, route, listener);
+    public void downloadFile(RelayFileRequestProperties reqProperties, String pathnamePrefix, RelayStreamResponseListener listener) {
+        LogHelper.trace("Relay", "Downloading File");
+        try {
+            getHost(buildHostUrl(reqProperties.serverPath, pathnamePrefix),
+                    new InstantiateHostCallback() {
+                        @Override
+                        public void onError(String message) {
+                            LogHelper.error("Relay",message);
+                            listener.relayStreamResponse(
+                                    -1,
+                                    false,
+                                    null,
+                                    message,
+                                    null);
+                        }
+
+                        @Override
+                        public void hostInstantiated(String hostUrl, Host host) {
+                            try {
+                                host.downloadFile(reqProperties, listener);
+                            } catch (IOException e) {
+                                listener.relayStreamResponse(
+                                        -1,
+                                        false,
+                                        null,
+                                        e.getMessage(),
+                                        null);
+                            }
+                        }
+                    });
+        } catch (RelayException e) {
+            LogHelper.error("Relay", e.getMessage());
+            relayResponseListener.onCompletion(false, e.getMessage());
+        }
     }
 
-    public void downloadFile(RelayFileRequestProperties reqProperties, RelayResponseListener listener) throws IOException {
-        Host host = hosts.get(resolveHost());
-        host.downloadFile(reqProperties, listener);
+    public void rePairWithRelayServer(String serverUrl) {
+        rePairWithRelayServer(serverUrl, null);
     }
 
-    public String resolveHost() {
-        if (relayHosts.length == 1) {
-            return relayHosts[0];
+    public void rePairWithRelayServer(String serverUrl, String pathnamePrefix) {
+        LogHelper.trace("Relay", "Repairing with Server");
+        try {
+            getHost(buildHostUrl(serverUrl, pathnamePrefix),
+                    new InstantiateHostCallback() {
+                        @Override
+                        public void onError(String message) { relayResponseListener.onCompletion(false, message); }
+
+                        @Override
+                        public void hostInstantiated(String hostUrl, Host host) {
+                            host.rePairWithHost(new InstantiateHostCallback() {
+                                @Override
+                                public void onError(String message) {
+                                    LogHelper.error("Relay", message);
+                                    relayResponseListener.onCompletion(false, message);
+                                }
+
+                                @Override
+                                public void hostInstantiated(String hostUrl, Host host) {
+                                    pairedHosts.put(hostUrl, host);
+                                    relayResponseListener.onCompletion(true, "Successfully Re-Paired with " + hostUrl);
+                                }
+                            });
+                        }
+                    });
+        } catch (RelayException e) {
+            relayResponseListener.onCompletion(false, e.getMessage());
+        }
+    }
+
+    public String adjustRelaySettings(String serverUrl,
+                                      int newStreamChunkSize,
+                                      int newPairPoolSize,
+                                      Boolean persistPairs) {
+        return adjustRelaySettings(
+                serverUrl,
+                null,
+                newStreamChunkSize,
+                newPairPoolSize,
+                persistPairs);
+    }
+
+    public String adjustRelaySettings(String serverUrl,
+                                      String pathnamePrefix,
+                                      int newStreamChunkSize,
+                                      int newPairPoolSize,
+                                      Boolean persistPairs) {
+        LogHelper.trace("Relay", "Adjusting Relay Settings");
+        String responseMessage = "";
+        try {
+            serverUrl = buildHostUrl(serverUrl, pathnamePrefix);
+        } catch (RelayException e) {
+            relayResponseListener.onCompletion(false, e.getMessage());
+            responseMessage = e.getMessage();
+            LogHelper.error("Relay", responseMessage);
+            return responseMessage;
+        }
+        if (newStreamChunkSize != 0 && newStreamChunkSize != getStreamChunkSizeSetting()) {
+            setStreamChunkSize(newStreamChunkSize);
+            responseMessage = responseMessage + "\nRelaySetting.streamChunkSize adjusted to " + newStreamChunkSize;
+        }
+        if (newPairPoolSize != 0 && newPairPoolSize != getPairPoolSizeSetting()) {
+            setPairPoolSize(newPairPoolSize);
+            responseMessage = responseMessage + "\nRelaySetting.pairPoolSize adjusted to " + newPairPoolSize;
+        }
+        if (persistPairs != getPersistPairsSetting()) {
+            setPersistPairs(persistPairs);
+            responseMessage = responseMessage + "\nRelaySetting.persistPairs adjusted to " + persistPairs;
+        }
+        if (responseMessage.isEmpty()) {
+            responseMessage = "\nNo Relay Settings were changed based on arguments and existing RelaySettings";
         } else {
-            // TODO: Logic here to determine which server to use if there are multiple hosts.
-            return "";
+            rePairWithRelayServer(serverUrl, pathnamePrefix);
+            responseMessage = responseMessage + "\nAlso, Relay was Re-Paired with " + serverUrl ;
+        }
+        LogHelper.info("Relay", responseMessage);
+        return responseMessage;
+    }
+
+    public static void enableFileLogging(String serverUrl,
+                                             Boolean isEnabled) {
+        enableFileLogging(serverUrl, null, isEnabled);
+    }
+
+    public static void enableFileLogging(String serverUrl,
+                                             String pathnamePrefix,
+                                             Boolean isEnabled) {
+        LogHelper.trace("Relay", "Setting FileLogging to " + isEnabled);
+        LogHelper.enableFileLogging(isEnabled);
+    }
+
+    public static String readLogFile(String serverUrl) {
+        return readLogFile(serverUrl, null);
+    }
+
+    public static String readLogFile(String serverUrl,
+                                     String pathnamePrefix) {
+        LogHelper.trace("Relay", "Reading Log File");
+        return LogHelper.readLogFileContents();
+    }
+
+    public static void clearLogFile(String serverUrl) {
+        clearLogFile(serverUrl, null);
+    }
+
+    public static void clearLogFile(String serverUrl,
+                                    String pathnamePrefix) {
+        LogHelper.trace("Relay", "Clearing log file");
+        LogHelper.clearLogFileContents();
+    }
+
+    public String[] getHostList() {
+        LogHelper.trace("Relay", "getting Host List");
+        return pairedHosts.keySet().toArray(new String[0]);
+    }
+    // endregion
+
+    // region Private Methods
+    private void getHost(String hostUrl, InstantiateHostCallback callback) {
+        final Host[] hostToReturn = { pairedHosts.get(hostUrl) };
+        if (hostToReturn[0] == null) {
+            new Host(ctx, hostUrl, new InstantiateHostCallback() {
+                @Override
+                public void onError(String message) {
+                    relayResponseListener.onCompletion(false, message);
+                }
+
+                @Override
+                public void hostInstantiated(String hostUrl, Host host) {
+                    pairedHosts.put(hostUrl, host);
+                    callback.hostInstantiated(hostUrl, host);
+                }
+            });
+        } else {
+            callback.hostInstantiated(hostUrl, hostToReturn[0]);
         }
     }
 
-    public void rePairWithHost(RelayResponseListener listener) {
-        Host host = hosts.get(resolveHost());
-        Objects.requireNonNull(host).rePairWithHost(listener);
+    private int getStreamChunkSizeSetting() {
+        return RelaySettings.streamChunkSize;
     }
 
-    public static String bytesToDecimal(byte[] bytes) {
-        StringBuilder decimal = new StringBuilder();
-        for (byte b : bytes)
-            decimal.append(Byte.toUnsignedInt(b)).append(", ");
-        return decimal.toString();
+    private int getPairPoolSizeSetting() {
+        return RelaySettings.pairPoolSize;
     }
+
+    private boolean getPersistPairsSetting() {
+        return RelaySettings.persistPairs;
+    }
+
+    private void setStreamChunkSize(int newSize) {
+        RelaySettings.streamChunkSize = newSize;
+    }
+
+    private void setPairPoolSize(int newSize) {
+        RelaySettings.pairPoolSize = newSize;
+    }
+
+    private void setPersistPairs(boolean bool) {
+        RelaySettings.persistPairs = bool;
+    }
+    // endregion
+
+    // region Static Methods
+    static String buildHostUrl(String serverUrl, String pathnamePrefix) {
+        if (serverUrl == null || serverUrl.isEmpty()) {
+            String errorMessage = "ServerUrl must be a valid String path";
+            LogHelper.error("Relay", errorMessage);
+            throw new RelayException("Relay", errorMessage);
+        }
+        if (
+                pathnamePrefix != null &&
+                        !serverUrl.endsWith(pathnamePrefix)) {
+            if (serverUrl.endsWith("/")) {
+                serverUrl = serverUrl.substring(0, serverUrl.length() - 1);
+            }
+            return serverUrl + "/" + pathnamePrefix;
+        } else {
+            return serverUrl;
+        }
+    }
+    // endregion
 }
 

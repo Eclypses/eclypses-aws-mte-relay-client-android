@@ -24,15 +24,13 @@
 
 package com.mte.relay;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
+class RelaySettings {
 
-public interface RWHResponseListener {
-    void onError(int code, String message, RelayHeaders relayHeaders);
-    void onJsonResponse(JSONObject jsonResponse, RelayHeaders relayHeaders);
-
-    void onJsonArrayResponse(JSONArray jsonArrayResponse, RelayHeaders relayHeaders);
-
-    void onByteArrayResponse(byte[] byteArrayResponse, RelayHeaders relayHeaders);
+    static String relayVersion = "4.2.3";
+    static int streamChunkSize = 65536;
+    static final String licenseCompanyName = "Eclypses Inc";
+    static final String licenseKey = "9eHOohOm/GwY01xbvNTL9B+1";
+    static boolean persistPairs = false;
+    static int pairPoolSize = 5;
 
 }

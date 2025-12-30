@@ -52,12 +52,12 @@ public class RelayOptions {
         return bodyIsEncoded;
     }
 
-    String clientId;
+    final String clientId;
     String pairId;
-    String encodeType;
-    Boolean urlIsEncoded;
-    Boolean headersAreEncoded;
-    Boolean bodyIsEncoded;
+    final String encodeType;
+    final Boolean urlIsEncoded;
+    final Boolean headersAreEncoded;
+    final Boolean bodyIsEncoded;
 
     public RelayOptions(String clientId,
                         String pairId,
@@ -81,7 +81,6 @@ public class RelayOptions {
         args.add(options.getUrlIsEncoded() ? "1" : "0");
         args.add(options.getHeadersAreEncoded() ? "1" : "0");
         args.add(options.getBodyIsEncoded() ? "1" : "0");
-
         return String.join(",", args);
     }
 

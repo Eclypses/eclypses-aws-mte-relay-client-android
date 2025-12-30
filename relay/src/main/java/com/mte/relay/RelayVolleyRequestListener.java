@@ -24,11 +24,17 @@
 
 package com.mte.relay;
 
-class Settings {
+import com.android.volley.NetworkResponse;
 
-    static String clientId = "";
-    static int uploadChunkSize = 65536;
-    static int downloadChunkSize = 65536;
-    static String licenseCompanyName = "Eclypses Inc";
-    static String licenseKey = "9eHOohOm/GwY01xbvNTL9B+1";
+import org.json.JSONObject;
+
+import java.util.List;
+import java.util.Map;
+
+public interface RelayVolleyRequestListener {
+
+    void onError(NetworkResponse networkResponse, String message, Map<String, List<String>> responseHeaders);
+
+    void onResponse(NetworkResponse networkResponse, byte[] responseBytes, Map<String, List<String>> responseHeaders);
+
 }
