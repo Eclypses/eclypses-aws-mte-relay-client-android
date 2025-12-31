@@ -22,17 +22,17 @@ This AAR library provides the Java language Eclypses MteRelay Mobile Client libr
 ### 1. Maven Central
 - Add the following line to your app's `build.gradle` file:
   ```groovy
-  implementation 'com.eclypses:eclypses-aws-mte-relay-client-android-release:x.x.x'
+  implementation 'com.eclypses:eclypses-aws-mte-relay-client-android-release:4.2.4'
   ```
 - Confirm that MavenCentral is one of your listed repositories.
 
 ### 2. Local AAR File
 - Create a 'libs' directory at the same level as the `src` directory in your app.
 - Download the Relay Library from [GitHub](https://github.com/Eclypses/eclypses-aws-mte-relay-client-android.git) and compile it.
-- Add the resulting `.aar` file (e.g., `eclypses-aws-mte-relay-client-android-release-x.x.x-release.aar`) to the 'libs' directory.
+- Add the resulting `.aar` file (e.g., `eclypses-aws-mte-relay-client-android-release-4.2.4-release.aar`) to the 'libs' directory.
 - Add the following line to your module's `build.gradle` dependencies block:
   ```groovy
-  implementation files('libs/eclypses-aws-mte-relay-client-android-release-x.x.x-release.aar')
+  implementation files('libs/eclypses-aws-mte-relay-client-android-release-4.2.4-release.aar')
   ```
 
 <br><br>
