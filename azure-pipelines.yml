@@ -1,5 +1,3 @@
-
-
 trigger:
     branches:
       include:
@@ -33,7 +31,7 @@ steps:
     Contents: |
       .gitignore
       **/*.yml
-      dev_docs/
+      dev_docs
       release.sh
 
 - script: |
@@ -57,4 +55,3 @@ steps:
       ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts
       git push git@github.com:Eclypses/$(Build.Repository.Name).git HEAD:refs/heads/public --force  --tags
     workingDirectory: $(relayDirectory)
-
