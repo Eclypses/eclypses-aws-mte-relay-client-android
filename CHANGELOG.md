@@ -6,6 +6,18 @@ All notable changes to this project will be documented in this file.
 -
 
 ### Changed
+-
+
+### Fixed
+-
+
+
+## [4.2.6] - 2025-12-31
+
+### Added
+-
+
+### Changed
 - Edited azure-pipelines.yml to deleted dev_docs directory on push to GitHub
 
 ### Fixed
@@ -157,3 +169,5 @@ All notable changes to this project will be documented in this file.
 [4.2.3]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.2.3
 [4.2.4]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.2.4
 [4.2.5]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.2.5
+
+[4.2.6]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.2.6
