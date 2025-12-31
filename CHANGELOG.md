@@ -3,6 +3,18 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+-
+
+### Changed
+-
+
+### Fixed
+-
+
+
+## [4.2.5] - 2025-12-31
+
+### Added
 - Dev_Docs directory with helpful markdown files 
 
 ### Changed
@@ -144,3 +156,5 @@ All notable changes to this project will be documented in this file.
 [4.0.0]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.0.0
 [3.7.1]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v3.7.1
 [3.7.0]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v3.7.0
+
+[4.2.5]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.2.5
