@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 -
 
 ### Changed
--
+- Edited azure-pipelines.yml to deleted dev_docs directory on push to GitHub
 
 ### Fixed
 -
@@ -146,15 +146,14 @@ All notable changes to this project will be documented in this file.
  - General Cleanup
 
 
-[4.2.4]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.2.4
-[4.2.3]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.2.3
-[4.2.2]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.2.2
-[4.2.1]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.2.1
-[4.2.0]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.2.0
-[4.1.1]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.1.1
-[4.1.0]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.1.0
-[4.0.0]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.0.0
-[3.7.1]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v3.7.1
 [3.7.0]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v3.7.0
-
+[3.7.1]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v3.7.1
+[4.0.0]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.0.0
+[4.1.0]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.1.0
+[4.1.1]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.1.1
+[4.2.0]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.2.0
+[4.2.1]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.2.1
+[4.2.2]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.2.2
+[4.2.3]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.2.3
+[4.2.4]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.2.4
 [4.2.5]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.2.5
