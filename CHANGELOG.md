@@ -3,13 +3,17 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
--
+- Layered JVM unit test suite for contract/model behavior, header bridge boundaries, facade conversion behavior, and throughput/edge scenarios.
+- Deterministic test fixtures and hand-written fake codec infrastructure for controlled encode/decode behavior, call history, and lifecycle resets.
+- JaCoCo coverage report and verification tasks with configurable minimum line coverage (`-PminLineCoverage`, default `0.40`).
 
 ### Changed
--
+- Added a runtime-safe codec seam (`RelayCodec`) and delegated existing `NetworkHeaderHelper` paths through it without changing public runtime behavior.
+- Updated Azure Pipeline to run lint and unit tests on all branches, run coverage generation/verification only on `develop`, and skip coverage on `master`.
+- Added Android SDK environment resolution and `local.properties` generation for macOS pipeline agents.
 
 ### Fixed
--
+- Corrected JaCoCo verification DSL configuration for reliable Gradle coverage gate execution.
 
 
 ## [4.2.6] - 2025-12-31
@@ -18,7 +22,7 @@ All notable changes to this project will be documented in this file.
 -
 
 ### Changed
-- Edited azure-pipelines.yml to deleted dev_docs directory on push to GitHub
+- Edited azure-pipelines.yml to delete dev_docs directory on push to GitHub
 
 ### Fixed
 -
