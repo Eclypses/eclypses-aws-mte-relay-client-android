@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 - Added a runtime-safe codec seam (`RelayCodec`) and delegated existing `NetworkHeaderHelper` paths through it without changing public runtime behavior.
 - Updated Azure Pipeline to run lint and unit tests on all branches, run coverage generation/verification only on `develop`, and skip coverage on `master`.
 - Added Android SDK environment resolution and `local.properties` generation for macOS pipeline agents.
+- Updated `release.sh` with develop-branch release preflight checks, remote tag collision checks, and stricter shell execution safeguards.
 
 ### Fixed
 - Corrected JaCoCo verification DSL configuration for reliable Gradle coverage gate execution.
