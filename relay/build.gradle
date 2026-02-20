@@ -16,7 +16,7 @@ android {
         minSdk 26
         targetSdk 34
         versionCode 1
-        versionName "4.2.6"
+        versionName "4.3.0"
         setProperty("archivesBaseName", "eclypses-aws-mte-relay-client-android-release-$versionName")
     }
 
@@ -131,7 +131,7 @@ publishing {
 
             groupId = 'com.eclypses'
             artifactId = 'eclypses-aws-mte-relay-client-android-release'
-            version = '4.2.6'
+            version = '4.3.0'
 
             afterEvaluate {
                 artifact("$buildDir/outputs/aar/${artifactId}-${version}-release.aar")

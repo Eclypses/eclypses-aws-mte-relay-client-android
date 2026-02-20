@@ -37,7 +37,7 @@ Add the following to your app's `build.gradle` file:
 
 ```groovy
 dependencies {
-    implementation 'com.eclypses:eclypses-aws-mte-relay-client-android-release:4.2.6'
+    implementation 'com.eclypses:eclypses-aws-mte-relay-client-android-release:4.3.0'
 }
 ```
 
@@ -63,7 +63,7 @@ repositories {
 
 ```groovy
 dependencies {
-    implementation 'com.eclypses:eclypses-aws-mte-relay-client-android-release:4.2.6'
+    implementation 'com.eclypses:eclypses-aws-mte-relay-client-android-release:4.3.0'
     
     // Required logging dependencies
     implementation 'org.slf4j:slf4j-api:2.0.9'

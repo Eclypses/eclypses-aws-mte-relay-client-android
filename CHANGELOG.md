@@ -3,6 +3,18 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+-
+
+### Changed
+-
+
+### Fixed
+-
+
+
+## [4.3.0] - 2026-02-19
+
+### Added
 - Layered JVM unit test suite for contract/model behavior, header bridge boundaries, facade conversion behavior, and throughput/edge scenarios.
 - Deterministic test fixtures and hand-written fake codec infrastructure for controlled encode/decode behavior, call history, and lifecycle resets.
 - JaCoCo coverage report and verification tasks with configurable minimum line coverage (`-PminLineCoverage`, default `0.40`).
@@ -176,3 +188,5 @@ All notable changes to this project will be documented in this file.
 [4.2.5]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.2.5
 
 [4.2.6]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.2.6
+
+[4.3.0]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.3.0
