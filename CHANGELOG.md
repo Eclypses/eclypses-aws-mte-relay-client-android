@@ -9,6 +9,18 @@ All notable changes to this project will be documented in this file.
 -
 
 ### Fixed
+-
+
+
+## [4.3.1] - 2026-02-19
+
+### Added
+-
+
+### Changed
+-
+
+### Fixed
 - Resolved Azure Pipelines YAML parsing failure in `azure-pipelines.yml` by correcting the `local.properties` generation block indentation/structure.
 
 
@@ -190,3 +202,5 @@ All notable changes to this project will be documented in this file.
 [4.2.6]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.2.6
 
 [4.3.0]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.3.0
+
+[4.3.1]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.3.1
