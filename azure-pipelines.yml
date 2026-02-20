@@ -1,19 +1,78 @@
 trigger:
-    branches:
-      include:
-        - master
-        
+  branches:
+    include:
+      - '*'
+
 variables:
-    packageName: 'eclypses-aws-mte-relay-client-android'
-    relayDirectory: '$(Build.Repository.LocalPath)'
+  packageName: 'eclypses-aws-mte-relay-client-android'
+  relayDirectory: '$(Build.Repository.LocalPath)'
 
-
-pool: 'Linux x86 64bit'
+pool: 'MacOS - Intel'
 
 steps:
+- script: |
+    set -euo pipefail
+
+    SDK_DIR=""
+    if [ -n "${ANDROID_SDK_ROOT:-}" ]; then
+      SDK_DIR="$ANDROID_SDK_ROOT"
+    elif [ -n "${ANDROID_HOME:-}" ]; then
+      SDK_DIR="$ANDROID_HOME"
+    elif [ -d "$HOME/Library/Android/sdk" ]; then
+      SDK_DIR="$HOME/Library/Android/sdk"
+    fi
+
+    if [ -z "$SDK_DIR" ]; then
+      echo "Android SDK path was not found. Set ANDROID_SDK_ROOT or ANDROID_HOME on the agent."
+      exit 1
+    fi
+
+    echo "Using Android SDK at: $SDK_DIR"
+    echo "##vso[task.setvariable variable=ANDROID_SDK_ROOT]$SDK_DIR"
+    echo "##vso[task.setvariable variable=ANDROID_HOME]$SDK_DIR"
+
+    echo "sdk.dir=$SDK_DIR" > local.properties
+  displayName: 'Resolve Android SDK and generate local.properties'
+  workingDirectory: $(relayDirectory)
+
+- script: |
+    set -euo pipefail
+    ./gradlew :relay:lint :relay:testDebugUnitTest
+  displayName: 'Run lint and unit tests'
+  workingDirectory: $(relayDirectory)
+  env:
+    ANDROID_SDK_ROOT: $(ANDROID_SDK_ROOT)
+    ANDROID_HOME: $(ANDROID_HOME)
+
+- script: |
+    set -euo pipefail
+    ./gradlew :relay:jacocoUnitTestReport :relay:jacocoUnitTestCoverageVerification
+  displayName: 'Run coverage report and verification (develop only)'
+  condition: and(
+               succeeded(),
+               eq(variables['Build.SourceBranch'], 'refs/heads/develop')
+             )
+  workingDirectory: $(relayDirectory)
+  env:
+    ANDROID_SDK_ROOT: $(ANDROID_SDK_ROOT)
+    ANDROID_HOME: $(ANDROID_HOME)
+
+- task: PublishCodeCoverageResults@2
+  displayName: 'Publish JaCoCo coverage (develop only)'
+  condition: and(
+               succeeded(),
+               eq(variables['Build.SourceBranch'], 'refs/heads/develop')
+             )
+  inputs:
+    summaryFileLocation: '$(relayDirectory)/relay/build/reports/jacoco/jacocoUnitTestReport/jacocoUnitTestReport.xml'
+    pathToSources: '$(relayDirectory)/relay/src/main/java'
+    failIfCoverageEmpty: true
 
 - task: InstallSSHKey@0
-  condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+  condition: and(
+               succeeded(),
+               eq(variables['Build.SourceBranch'], 'refs/heads/master')
+             )
   displayName: 'Install the SSH key'
   inputs:
     knownHostsEntry: '$(known_hosts_entry)'
@@ -35,6 +94,7 @@ steps:
       release.sh
 
 - script: |
+    set -euo pipefail
     git add .
     git commit -am 'Commit unnecessary file deletion'
   displayName: 'Commit unnecessary file deletion'
@@ -52,6 +112,7 @@ steps:
              )
   inputs:
     script: |
+      set -euo pipefail
       ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts
-      git push git@github.com:Eclypses/$(Build.Repository.Name).git HEAD:refs/heads/public --force  --tags
+      git push git@github.com:Eclypses/$(Build.Repository.Name).git HEAD:refs/heads/public --force --tags
     workingDirectory: $(relayDirectory)

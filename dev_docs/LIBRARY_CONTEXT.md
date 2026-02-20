@@ -57,3 +57,19 @@ The library uses a **Singleton-Host** pattern to manage connections and encrypti
 Configuration is primarily handled in `RelaySettings.java` (internally) or via `Relay.adjustRelaySettings` (runtime).
 *   **`pairPoolSize`**: Number of concurrent MTE states per host (Default: 5).
 *   **`streamChunkSize`**: Buffer size for file streaming operations (Default: 64KB).
+
+## 7. Test & Coverage Tooling
+The library now includes deterministic JVM unit tests using:
+* JUnit5 (`useJUnitPlatform`)
+* kotlinx-coroutines-test (`runTest`) for repeatable burst/edge scheduling
+* Hand-written test fakes and centralized fixtures (no heavy mocking framework)
+
+Coverage and quality gate tasks:
+* `:relay:jacocoUnitTestReport` (XML + HTML)
+* `:relay:jacocoUnitTestCoverageVerification` (default min line coverage `0.40`)
+* Override threshold with `-PminLineCoverage=<value>` (example `0.45`)
+
+CI branch behavior:
+* lint + unit tests on all branches
+* coverage report + verification + publish on `develop` only
+* coverage skipped on `master`

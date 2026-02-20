@@ -38,7 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class MteHelper {
+public class MteHelper implements RelayCodec {
 
     public Map<String, Pair> pairMap;
 

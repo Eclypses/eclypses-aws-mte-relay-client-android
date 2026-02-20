@@ -44,6 +44,13 @@ public class NetworkHeaderHelper {
                                                      String pairId,
                                                      String[] headersToEncode,
                                                      Map<String, String> origHeaders) {
+        return processRequestHeaders((RelayCodec) mteHelper, pairId, headersToEncode, origHeaders);
+    }
+
+    public static EncodeResult processRequestHeaders(RelayCodec relayCodec,
+                                                     String pairId,
+                                                     String[] headersToEncode,
+                                                     Map<String, String> origHeaders) {
         if (headersToEncode == null || origHeaders == null || origHeaders.isEmpty()) {
             return new EncodeResult(pairId, "");
         }
@@ -63,7 +70,7 @@ public class NetworkHeaderHelper {
             }
         }
         JSONObject headersJson = new JSONObject(encodedHeaders);
-        return mteHelper.encode(pairId, headersJson.toString());
+        return relayCodec.encode(pairId, headersJson.toString());
     }
 
     public static RelayOptions getRelayHeaderValues(HttpURLConnection httpConn) {
@@ -82,8 +89,12 @@ public class NetworkHeaderHelper {
     }
 
     public static void processResponseHeaders(MteHelper mteHelper, String responsePairId, Map<String, List<String>> updatedResponseHeaders, String ehHeader) throws MteException {
+        processResponseHeaders((RelayCodec) mteHelper, responsePairId, updatedResponseHeaders, ehHeader);
+    }
+
+    public static void processResponseHeaders(RelayCodec relayCodec, String responsePairId, Map<String, List<String>> updatedResponseHeaders, String ehHeader) throws MteException {
         if (ehHeader != null && !ehHeader.isEmpty()) {
-            DecodeResult decodeResult = mteHelper.decode(responsePairId, ehHeader);
+            DecodeResult decodeResult = relayCodec.decode(responsePairId, ehHeader);
             try {
                 JSONObject decodedHeaders = new JSONObject(decodeResult.decodedStr);
                 Iterator<String> keysIterator = decodedHeaders.keys();
