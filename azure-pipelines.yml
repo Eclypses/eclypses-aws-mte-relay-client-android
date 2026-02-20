@@ -31,9 +31,7 @@ steps:
     echo "##vso[task.setvariable variable=ANDROID_SDK_ROOT]$SDK_DIR"
     echo "##vso[task.setvariable variable=ANDROID_HOME]$SDK_DIR"
 
-    cat > local.properties <<EOF
-  sdk.dir=$SDK_DIR
-  EOF
+    echo "sdk.dir=$SDK_DIR" > local.properties
   displayName: 'Resolve Android SDK and generate local.properties'
   workingDirectory: $(relayDirectory)
 

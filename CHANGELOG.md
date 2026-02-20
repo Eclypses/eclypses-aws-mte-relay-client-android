@@ -9,7 +9,7 @@ All notable changes to this project will be documented in this file.
 -
 
 ### Fixed
--
+- Resolved Azure Pipelines YAML parsing failure in `azure-pipelines.yml` by correcting the `local.properties` generation block indentation/structure.
 
 
 ## [4.3.0] - 2026-02-19
