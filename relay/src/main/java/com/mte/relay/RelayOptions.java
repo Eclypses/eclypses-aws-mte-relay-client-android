@@ -52,25 +52,32 @@ public class RelayOptions {
         return bodyIsEncoded;
     }
 
+    public Boolean getPreventStreaming() {
+        return preventStreaming;
+    }
+
     final String clientId;
     String pairId;
     final String encodeType;
     final Boolean urlIsEncoded;
     final Boolean headersAreEncoded;
     final Boolean bodyIsEncoded;
+    final Boolean preventStreaming;
 
     public RelayOptions(String clientId,
                         String pairId,
                         String encodeType,
                         Boolean urlIsEncoded,
                         Boolean headersAreEncoded,
-                        Boolean bodyIsEncoded) {
+                        Boolean bodyIsEncoded,
+                        Boolean preventStreaming) {
         this.clientId = clientId;
         this.pairId = pairId;
         this.encodeType = encodeType;
         this.urlIsEncoded = urlIsEncoded;
         this.headersAreEncoded = headersAreEncoded;
         this.bodyIsEncoded = bodyIsEncoded;
+        this.preventStreaming = preventStreaming;
     }
 
     public static String formatMteRelayHeader(RelayOptions options) {
@@ -81,23 +88,33 @@ public class RelayOptions {
         args.add(options.getUrlIsEncoded() ? "1" : "0");
         args.add(options.getHeadersAreEncoded() ? "1" : "0");
         args.add(options.getBodyIsEncoded() ? "1" : "0");
+        args.add(options.getPreventStreaming() ? "1" : "0");
         return String.join(",", args);
+    }
+
+    public static String formatMteRelayHeaderForRoute(RelayOptions options, String route) {
+        if ("/api/mte-relay".equals(route) || "/api/mte-pair".equals(route)) {
+            return options.getClientId() == null ? "" : options.getClientId();
+        }
+        return formatMteRelayHeader(options);
     }
 
     public static RelayOptions parseMteRelayHeader(String header) {
         String[] args = header.split(",");
         if (args.length > 0) {
-            if (args.length > 1) {
+            if (args.length > 5) {
                 return new RelayOptions(args[0],
                         args[1],
                         args[2].equals("0") ? "MTE" : "MKE",
                         args[3].equals("1"),
                         args[4].equals("1"),
-                        args[5].equals("1"));
+                        args[5].equals("1"),
+                        args.length > 6 && args[6].equals("1"));
             } else {
                 return new RelayOptions(args[0],
                         "",
                         "",
+                        false,
                         false,
                         false,
                         false);

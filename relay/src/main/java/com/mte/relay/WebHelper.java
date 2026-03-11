@@ -226,7 +226,8 @@ public class WebHelper {
                                                       String contentType) {
         Map<String, String> params = new HashMap<>();
         params.put(Constants.CONTENT_TYPE_KEY, contentType);
-        params.put(Constants.X_MTE_RELAY_KEY, RelayOptions.formatMteRelayHeader(connectionModel.relayOptions));
+        params.put(Constants.X_MTE_RELAY_KEY,
+            RelayOptions.formatMteRelayHeaderForRoute(connectionModel.relayOptions, connectionModel.route));
         params.put(Constants.X_MTE_RELAY_EH_KEY, connectionModel.relayHeaders.encryptedDecryptedHeaders);
 
         // Add the rest of the headers from the original request if it's not null
@@ -248,15 +249,17 @@ public class WebHelper {
         List<Header> filteredHeaders = new ArrayList<>();
 
         for (Header header : response.allHeaders) {
-            if (header.getName().equals(Constants.X_MTE_RELAY_KEY)) {
-                RelayOptions relayOptions = RelayOptions.parseMteRelayHeader(header.getValue());
+            String headerName = header.getName();
+            String headerValue = header.getValue();
+            if (headerName != null && headerName.equalsIgnoreCase(Constants.X_MTE_RELAY_KEY)) {
+                RelayOptions relayOptions = RelayOptions.parseMteRelayHeader(headerValue == null ? "" : headerValue.trim());
                 if (relayOptions != null) {
                     responseHeaders.clientId = relayOptions.clientId;
                     responseHeaders.pairId = relayOptions.pairId;
                     responseHeaders.encoderType = relayOptions.encodeType;
                 }
-            } else if (header.getName().equals(Constants.X_MTE_RELAY_EH_KEY)) {
-                responseHeaders.encryptedDecryptedHeaders = header.getValue();
+            } else if (headerName != null && headerName.equalsIgnoreCase(Constants.X_MTE_RELAY_EH_KEY)) {
+                responseHeaders.encryptedDecryptedHeaders = headerValue;
             } else {
                 // Only add headers we don’t consume
                 filteredHeaders.add(header);

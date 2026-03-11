@@ -149,10 +149,13 @@ public class Host {
     // endregion
 
     // region Public Methods
-    public <T> void sendRequest(Request<T> req, String[] headersToEncrypt, RelayVolleyRequestListener listener) {
+    public <T> void sendRequest(Request<T> req,
+                                String[] headersToEncrypt,
+                                boolean preventStreaming,
+                                RelayVolleyRequestListener listener) {
         Thread sendingTread = new Thread(() -> {
             try {
-                sendUpdatedRequest(req, headersToEncrypt, listener);
+                sendUpdatedRequest(req, headersToEncrypt, preventStreaming, listener);
             } catch (InterruptedException |
                      UnsupportedEncodingException |
                      AuthFailureError |
@@ -163,11 +166,14 @@ public class Host {
         sendingTread.start();
     }
 
-    public <T> void sendOkHttpRequest(okhttp3.Request req, String[] headersToEncrypt, RelayOkHttpRequestListener listener) throws IOException {
+    public <T> void sendOkHttpRequest(okhttp3.Request req,
+                                      String[] headersToEncrypt,
+                                      boolean preventStreaming,
+                                      RelayOkHttpRequestListener listener) throws IOException {
 
         Request<T> volleyReq = OkHttpToVolleyConverter.convert(req);
         try {
-            sendUpdatedRequest(volleyReq, headersToEncrypt, new RelayVolleyRequestListener() {
+            sendUpdatedRequest(volleyReq, headersToEncrypt, preventStreaming, new RelayVolleyRequestListener() {
                 @Override
                 public void onError(NetworkResponse networkResponse, String errorMessage, Map<String, List<String>> responseHeaders) {
                     LogHelper.error("Host",errorMessage);
@@ -336,13 +342,15 @@ public class Host {
 
     synchronized public <T> void sendUpdatedRequest(Request<T> origRequest,
                                                     String[] headersToEncrypt,
+                                                    boolean preventStreaming,
                                                     RelayVolleyRequestListener listener)
             throws InterruptedException,
             UnsupportedEncodingException,
             MalformedURLException,
             AuthFailureError {
 
-        prevRequestData = storePrevRequest(prevRequestData, new PrevRequestData(this, origRequest, headersToEncrypt, listener));
+        prevRequestData = storePrevRequest(prevRequestData,
+                new PrevRequestData(this, origRequest, headersToEncrypt, preventStreaming, listener));
 
         while (!hostPaired) {
             wait();
@@ -373,7 +381,8 @@ public class Host {
                         encryptHeadersResult.encodedStr,
                         null),
                 setRelayOptions(encryptedBodyBytes != null,
-                        encryptedRouteResult.pairId));
+                    encryptedRouteResult.pairId,
+                    preventStreaming));
         webHelper.sendBytes(relayConnectionModel, origRequest, new NetworkResponseListener() {
             @Override
             public void onError(NetworkResponse networkResponse, byte[] data, RelayHeaders relayHeaders) {
@@ -499,6 +508,11 @@ public class Host {
     }
 
     synchronized private void checkForRelayServer(InstantiateHostCallback callback) {
+        checkForRelayServer(callback, false);
+    }
+
+    synchronized private void checkForRelayServer(InstantiateHostCallback callback, boolean retryWithEmptyClientId) {
+        String requestClientId = retryWithEmptyClientId ? "" : hostClientId;
         LogHelper.info("Host", "Checking for Host " + hostUrl);
         RelayConnectionModel connectionModel = new RelayConnectionModel(
                 hostUrl,
@@ -509,7 +523,14 @@ public class Host {
                 null,
                 null,
                 new RelayHeaders(),
-                setRelayOptions(true, null)
+                new RelayOptions(
+                    requestClientId,
+                    null,
+                    "MKE",
+                    true,
+                    true,
+                    true,
+                    false)
         );
         webHelper.sendJson(connectionModel, null, new NetworkResponseListener() {
 
@@ -520,6 +541,12 @@ public class Host {
                     statusCode =  networkResponse.statusCode;
                 } else {
                     statusCode = 503;
+                }
+                if (statusCode == 566 && !retryWithEmptyClientId) {
+                    LogHelper.info("HOST", "Server did not recognize stored clientId. Retrying with empty clientId.");
+                    hostClientId = "";
+                    checkForRelayServer(callback, true);
+                    return;
                 }
                 String errorMessage = "Code: " + statusCode + " Message: Unable to locate Relay Server at " + hostUrl;
                 LogHelper.error("HOST", errorMessage);
@@ -570,12 +597,15 @@ public class Host {
                 pairMapArray,
                 null,
                 null,
-                new RelayHeaders(hostClientId,
-                        null,
-                        "MKE",
-                        "",
-                        null),
-                setRelayOptions(true,null)
+                new RelayHeaders(),
+                new RelayOptions(
+                    hostClientId,
+                    null,
+                    "MKE",
+                    true,
+                    true,
+                    true,
+                    false)
         );
         webHelper.sendJsonArray(connectionModel, null, new NetworkResponseListener() {
 
@@ -678,6 +708,10 @@ public class Host {
     }
 
     RelayOptions setRelayOptions(boolean bodyIsEncoded, String pairId) {
+        return setRelayOptions(bodyIsEncoded, pairId, false);
+    }
+
+    RelayOptions setRelayOptions(boolean bodyIsEncoded, String pairId, boolean preventStreaming) {
         String clientId = hostClientId == null ? "" : hostClientId;
         return new RelayOptions(
                 clientId,
@@ -685,7 +719,8 @@ public class Host {
                 "MKE",
                 true,
                 true,
-                bodyIsEncoded);
+                bodyIsEncoded,
+                preventStreaming);
     }
 
     private EncodeResult encryptRoute(String route) throws UnsupportedEncodingException {

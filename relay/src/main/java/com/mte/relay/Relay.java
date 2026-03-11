@@ -74,10 +74,22 @@ public class Relay {
 
     // region Public Methods
     public <T> void addToMteRequestQueue(Request<T> req, String[] headersToEncrypt, RelayVolleyRequestListener listener) {
-        addToMteRequestQueue(req, headersToEncrypt, null, listener);
+        addToMteRequestQueue(req, headersToEncrypt, null, false, listener);
+    }
+
+    public <T> void addToMteRequestQueue(Request<T> req, String[] headersToEncrypt, boolean preventStreaming, RelayVolleyRequestListener listener) {
+        addToMteRequestQueue(req, headersToEncrypt, null, preventStreaming, listener);
     }
 
     public <T> void addToMteRequestQueue(Request<T> req, String[] headersToEncrypt, String pathnamePrefix, RelayVolleyRequestListener listener) {
+        addToMteRequestQueue(req, headersToEncrypt, pathnamePrefix, false, listener);
+    }
+
+    public <T> void addToMteRequestQueue(Request<T> req,
+                                         String[] headersToEncrypt,
+                                         String pathnamePrefix,
+                                         boolean preventStreaming,
+                                         RelayVolleyRequestListener listener) {
         LogHelper.trace("Relay", "Volley Request added to Queue");
         String relayServerPath = null;
         try {
@@ -98,16 +110,31 @@ public class Relay {
 
                     @Override
                     public void hostInstantiated(String hostUrl, Host host) {
-                        host.sendRequest(req, headersToEncrypt, listener);
+                        host.sendRequest(req, headersToEncrypt, preventStreaming, listener);
                     }
                 });
     }
 
     public void send(okhttp3.Request req, String[] headersToEncrypt, RelayOkHttpRequestListener listener) {
-        send(req, headersToEncrypt, null, listener);
+        send(req, headersToEncrypt, null, false, listener);
+    }
+
+    public void send(okhttp3.Request req,
+                     String[] headersToEncrypt,
+                     boolean preventStreaming,
+                     RelayOkHttpRequestListener listener) {
+        send(req, headersToEncrypt, null, preventStreaming, listener);
     }
 
     public void send(okhttp3.Request req, String[] headersToEncrypt, String pathnamePrefix, RelayOkHttpRequestListener listener) {
+        send(req, headersToEncrypt, pathnamePrefix, false, listener);
+    }
+
+    public void send(okhttp3.Request req,
+                     String[] headersToEncrypt,
+                     String pathnamePrefix,
+                     boolean preventStreaming,
+                     RelayOkHttpRequestListener listener) {
         String relayServerPath;
         HttpUrl url = req.url();
         relayServerPath = url.scheme() + "://" + url.host();
@@ -132,7 +159,7 @@ public class Relay {
                     public void hostInstantiated(String hostUrl, Host host) {
                         LogHelper.trace("Relay", "Sending OkHttp Request");
                         try {
-                            host.sendOkHttpRequest(req, headersToEncrypt, listener);
+                            host.sendOkHttpRequest(req, headersToEncrypt, preventStreaming, listener);
                         } catch (IOException e) {
                             LogHelper.error("Relay",e.getMessage());
                             okhttp3.Response errorResponse = OkHttpToVolleyConverter.convertErrorToOkHttpResponse(

@@ -12,6 +12,20 @@ All notable changes to this project will be documented in this file.
 -
 
 
+## [4.4.0] - 2026-03-11
+
+### Added
+- Added optional `preventStreaming` parameters to non-file `Relay.addToMteRequestQueue(...)` and `Relay.send(...)` overloads for per-request control.
+
+### Changed
+- Updated relay handshake request behavior so `/api/mte-relay` and `/api/mte-pair` send `x-mte-relay` as clientId-only (or empty string) instead of the legacy CSV options format.
+- Updated non-handshake `x-mte-relay` CSV formatting to include a fifth flag (`preventStreaming`) as the final relay options flag.
+
+### Fixed
+- Added `566` recovery during relay server discovery: when a stored clientId is rejected, the client now retries `/api/mte-relay` once with an empty clientId to fetch a new server-recognized clientId.
+- Updated relay response header parsing to case-insensitive matching for `x-mte-relay` and `x-mte-relay-eh`, ensuring clientId extraction works regardless of header casing.
+
+
 ## [4.3.1] - 2026-02-19
 
 ### Added
@@ -204,3 +218,5 @@ All notable changes to this project will be documented in this file.
 [4.3.0]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.3.0
 
 [4.3.1]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.3.1
+
+[4.4.0]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.4.0

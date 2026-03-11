@@ -37,7 +37,7 @@ Add the following to your app's `build.gradle` file:
 
 ```groovy
 dependencies {
-    implementation 'com.eclypses:eclypses-aws-mte-relay-client-android-release:4.3.1'
+    implementation 'com.eclypses:eclypses-aws-mte-relay-client-android-release:4.4.0'
 }
 ```
 
@@ -63,7 +63,7 @@ repositories {
 
 ```groovy
 dependencies {
-    implementation 'com.eclypses:eclypses-aws-mte-relay-client-android-release:4.3.1'
+    implementation 'com.eclypses:eclypses-aws-mte-relay-client-android-release:4.4.0'
     
     // Required logging dependencies
     implementation 'org.slf4j:slf4j-api:2.0.9'
@@ -1463,6 +1463,17 @@ Sends a Volley request through MteRelay.
 
 ---
 
+#### `addToMteRequestQueue(Request<T> req, String[] headersToEncrypt, boolean preventStreaming, RelayVolleyRequestListener listener)`
+Sends a Volley request through MteRelay with optional per-request streaming prevention signaling.
+- **Parameters:**
+    - `req`: Volley Request object
+    - `headersToEncrypt`: Array of header names to encrypt (may be null)
+    - `preventStreaming`: Set `true` to set the relay `preventStreaming` flag for this request
+    - `listener`: Callback for response/error
+- **Returns:** void
+
+---
+
 #### `addToMteRequestQueue(Request<T> req, String[] headersToEncrypt, String pathnamePrefix, RelayVolleyRequestListener listener)`
 Sends a Volley request with pathname prefix.
 - **Parameters:**
@@ -1470,6 +1481,18 @@ Sends a Volley request with pathname prefix.
   - `headersToEncrypt`: Array of header names to encrypt (may be null)
   - `pathnamePrefix`: Path prefix for relay routing (may be null)
   - `listener`: Callback for response/error
+- **Returns:** void
+
+---
+
+#### `addToMteRequestQueue(Request<T> req, String[] headersToEncrypt, String pathnamePrefix, boolean preventStreaming, RelayVolleyRequestListener listener)`
+Sends a Volley request with pathname prefix and optional per-request streaming prevention signaling.
+- **Parameters:**
+    - `req`: Volley Request object
+    - `headersToEncrypt`: Array of header names to encrypt (may be null)
+    - `pathnamePrefix`: Path prefix for relay routing (may be null)
+    - `preventStreaming`: Set `true` to set the relay `preventStreaming` flag for this request
+    - `listener`: Callback for response/error
 - **Returns:** void
 
 ---
@@ -1485,6 +1508,17 @@ Sends an OkHttp request through MteRelay.
 
 ---
 
+#### `send(okhttp3.Request req, String[] headersToEncrypt, boolean preventStreaming, RelayOkHttpRequestListener listener)`
+Sends an OkHttp request through MteRelay with optional per-request streaming prevention signaling.
+- **Parameters:**
+    - `req`: OkHttp Request object
+    - `headersToEncrypt`: Array of header names to encrypt (may be null)
+    - `preventStreaming`: Set `true` to set the relay `preventStreaming` flag for this request
+    - `listener`: Callback for response/error
+- **Returns:** void
+
+---
+
 #### `send(okhttp3.Request req, String[] headersToEncrypt, String pathnamePrefix, RelayOkHttpRequestListener listener)`
 Sends an OkHttp request with pathname prefix.
 - **Parameters:**
@@ -1492,6 +1526,18 @@ Sends an OkHttp request with pathname prefix.
   - `headersToEncrypt`: Array of header names to encrypt (may be null)
   - `pathnamePrefix`: Path prefix for relay routing (may be null)
   - `listener`: Callback for response/error
+- **Returns:** void
+
+---
+
+#### `send(okhttp3.Request req, String[] headersToEncrypt, String pathnamePrefix, boolean preventStreaming, RelayOkHttpRequestListener listener)`
+Sends an OkHttp request with pathname prefix and optional per-request streaming prevention signaling.
+- **Parameters:**
+    - `req`: OkHttp Request object
+    - `headersToEncrypt`: Array of header names to encrypt (may be null)
+    - `pathnamePrefix`: Path prefix for relay routing (may be null)
+    - `preventStreaming`: Set `true` to set the relay `preventStreaming` flag for this request
+    - `listener`: Callback for response/error
 - **Returns:** void
 
 ---
