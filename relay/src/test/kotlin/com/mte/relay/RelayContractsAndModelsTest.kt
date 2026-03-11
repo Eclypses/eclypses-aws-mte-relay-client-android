@@ -19,7 +19,8 @@ class RelayContractsAndModelsTest {
             "MTE",
             true,
             false,
-            true
+            true,
+            false
         )
 
         val header = RelayOptions.formatMteRelayHeader(original)
@@ -32,6 +33,7 @@ class RelayContractsAndModelsTest {
         assertTrue(parsed?.urlIsEncoded == true)
         assertFalse(parsed?.headersAreEncoded == true)
         assertTrue(parsed?.bodyIsEncoded == true)
+        assertFalse(parsed?.preventStreaming == true)
     }
 
     @Test
@@ -42,6 +44,7 @@ class RelayContractsAndModelsTest {
             "MKE",
             false,
             true,
+            false,
             false
         )
 
@@ -52,6 +55,7 @@ class RelayContractsAndModelsTest {
         assertFalse(parsed?.urlIsEncoded == true)
         assertTrue(parsed?.headersAreEncoded == true)
         assertFalse(parsed?.bodyIsEncoded == true)
+        assertFalse(parsed?.preventStreaming == true)
     }
 
     @Test
@@ -63,6 +67,7 @@ class RelayContractsAndModelsTest {
         assertEquals("", parsed?.pairId)
         assertEquals("", parsed?.encodeType)
         assertFalse(parsed?.urlIsEncoded == true)
+        assertFalse(parsed?.preventStreaming == true)
     }
 
     @Test
@@ -74,13 +79,68 @@ class RelayContractsAndModelsTest {
     }
 
     @Test
+    fun relayHeader_formatForRoute_pairingEndpoints_useClientIdOnly() {
+        val options = RelayOptions(
+            "client-3",
+            "pair-3",
+            "MKE",
+            true,
+            true,
+            true,
+            false
+        )
+
+        val relayCheckHeader = RelayOptions.formatMteRelayHeaderForRoute(options, "/api/mte-relay")
+        val pairingHeader = RelayOptions.formatMteRelayHeaderForRoute(options, "/api/mte-pair")
+
+        assertEquals("client-3", relayCheckHeader)
+        assertEquals("client-3", pairingHeader)
+    }
+
+    @Test
+    fun relayHeader_formatForRoute_nonPairingEndpoint_usesLegacyCsv() {
+        val options = RelayOptions(
+            "client-4",
+            "pair-4",
+            "MKE",
+            true,
+            false,
+            true,
+            false
+        )
+
+        val header = RelayOptions.formatMteRelayHeaderForRoute(options, "/api/customer-endpoint")
+
+        assertEquals("client-4,pair-4,1,1,0,1,0", header)
+    }
+
+    @Test
+    fun relayHeader_roundTrip_preventStreamingFlag_isSupported() {
+        val original = RelayOptions(
+            "client-ps",
+            "pair-ps",
+            "MKE",
+            true,
+            true,
+            true,
+            true
+        )
+
+        val header = RelayOptions.formatMteRelayHeader(original)
+        val parsed = RelayOptions.parseMteRelayHeader(header)
+
+        assertEquals("client-ps,pair-ps,1,1,1,1,1", header)
+        assertTrue(parsed?.preventStreaming == true)
+    }
+
+    @Test
     fun relayConnectionModel_holdsPayloadAndHeadersReferences() {
         val jsonPayload = JSONObject("{\"hello\":\"world\"}")
         val jsonArrayPayload = JSONArray("[1,2,3]")
         val bytesPayload = TestFixtures.SMALL_BYTES
         val headers = linkedMapOf("Authorization" to "Bearer abc")
         val relayHeaders = RelayHeaders("client", "pair", "MTE", "enc", emptyList())
-        val relayOptions = RelayOptions("client", "pair", "MTE", true, true, true)
+        val relayOptions = RelayOptions("client", "pair", "MTE", true, true, true, false)
 
         val model = RelayConnectionModel(
             TestFixtures.RELAY_ENDPOINT,
