@@ -3,6 +3,18 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+-
+
+### Changed
+-
+
+### Fixed
+-
+
+
+## [4.4.0] - 2026-03-11
+
+### Added
 - Added optional `preventStreaming` parameters to non-file `Relay.addToMteRequestQueue(...)` and `Relay.send(...)` overloads for per-request control.
 
 ### Changed
@@ -206,3 +218,5 @@ All notable changes to this project will be documented in this file.
 [4.3.0]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.3.0
 
 [4.3.1]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.3.1
+
+[4.4.0]: https://github.com/Eclypses/eclypses-aws-mte-relay-client-android/releases/tag/v4.4.0
