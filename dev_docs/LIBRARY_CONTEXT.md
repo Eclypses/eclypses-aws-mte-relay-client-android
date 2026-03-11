@@ -73,3 +73,29 @@ CI branch behavior:
 * lint + unit tests on all branches
 * coverage report + verification + publish on `develop` only
 * coverage skipped on `master`
+
+## 8. Recent Hotfix (2026-03-11)
+What changed:
+* `x-mte-relay` request formatting is now route-aware in Volley request construction.
+* Handshake endpoints `/api/mte-relay` and `/api/mte-pair` now send clientId-only (or empty string), while non-handshake routes keep the legacy CSV header format.
+* `Host.checkForRelayServer` now retries once with an empty clientId when the server returns HTTP `566`.
+
+How to run:
+* `./gradlew :relay:testDebugUnitTest --tests "com.mte.relay.RelayContractsAndModelsTest"`
+
+CI behavior:
+* No pipeline branch-rule changes were required for this hotfix.
+
+## 9. PreventStreaming Flag Update (2026-03-11)
+What changed:
+* Added optional `preventStreaming` argument support to non-file Volley and OkHttp Relay APIs.
+* Routed `preventStreaming` through request execution and retry flows so re-paired retries preserve per-request behavior.
+* Added `preventStreaming` as the fifth relay options flag in non-handshake `x-mte-relay` CSV values.
+* Made relay response header parsing case-insensitive for `x-mte-relay` / `x-mte-relay-eh` to reliably capture server-returned clientId.
+* Kept file upload/download request behavior unchanged.
+
+How to run:
+* `./gradlew :relay:testDebugUnitTest --tests "com.mte.relay.RelayContractsAndModelsTest"`
+
+CI behavior:
+* No pipeline branch-rule changes were required for this update.
