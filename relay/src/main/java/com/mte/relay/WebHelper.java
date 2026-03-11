@@ -237,7 +237,6 @@ public class WebHelper {
                     params.put(header.getKey(), header.getValue());
                 }
         }
-        LogHelper.debug("WebHelper", params.toString());
         return params;
     }
 
